@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         // --- GitHubからの原本取得 ---
         const githubToken = process.env.GITHUB_TOKEN;
         const repoOwner = "coyassddsphd";
-        const repoName = "coyasu-manual-web";
+        const repoName = "coyass-manual-web";
         const filePathInRepo = "manual_blueprint.md";
 
         if (!githubToken) {
