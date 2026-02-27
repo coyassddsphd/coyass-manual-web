@@ -1,9 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    Menu,
+    X,
+    ChevronRight,
+    Edit3,
+    CheckCircle2,
+    AlertCircle,
+    Search,
+    BookOpen,
+    ArrowRight,
+    MessageSquare
+} from "lucide-react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
 interface ManualViewerProps {
     initialMarkdown: string;
@@ -15,10 +34,40 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
     const [comment, setComment] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState("");
+    const [activeSection, setActiveSection] = useState<number>(0);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
 
-    // マークダウンを「## 」(章や節) ごとに分割する
-    // 最初の部分（タイトルなど）が空にならないよう注意
+    // セクション分割
     const sections = markdown.split(/(?=\n## )/).filter((sec) => sec.trim() !== "");
+
+    // 目次のタイトル抽出
+    const titles = sections.map(sec => {
+        const match = sec.match(/## (.*)/);
+        return match ? match[1] : "Untitled Section";
+    });
+
+    // スクロール追従ハイライト
+    const sectionRefs = useRef<(HTMLElement | null)[]>([]);
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        const index = sectionRefs.current.indexOf(entry.target as HTMLElement);
+                        if (index !== -1) setActiveSection(index);
+                    }
+                });
+            },
+            { threshold: 0.2, rootMargin: "-10% 0% -70% 0%" }
+        );
+
+        sectionRefs.current.forEach((ref) => {
+            if (ref) observer.observe(ref);
+        });
+
+        return () => observer.disconnect();
+    }, [sections]);
 
     const handleSubmit = async () => {
         if (!selectedSection || !comment.trim()) return;
@@ -53,150 +102,288 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
         }
     };
 
+    const scrollToSection = (index: number) => {
+        sectionRefs.current[index]?.scrollIntoView({ behavior: "smooth" });
+        setIsSidebarOpen(false);
+    };
+
+    const filteredSections = sections.filter((sec, idx) =>
+        titles[idx].toLowerCase().includes(searchQuery.toLowerCase()) ||
+        sec.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
-        <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6">
-            <header className="mb-10 border-b-2 border-blue-200 pb-6 text-center">
-                <div className="flex justify-center items-center gap-6 mb-6">
-                    {/* なめこ・医院ロゴ */}
-                    <div className="relative w-24 h-24 sm:w-32 sm:h-32 drop-shadow-md">
-                        <Image
-                            src="/logos/nameco.png"
-                            alt="中目黒コヤス歯科 ロゴ"
-                            fill
-                            className="object-contain"
-                            priority
-                        />
-                    </div>
-                    {/* ミガクマ */}
-                    <div className="relative w-20 h-20 sm:w-28 sm:h-28 drop-shadow-md">
-                        <Image
-                            src="/logos/migakuma.png"
-                            alt="ミガクマ"
-                            fill
-                            className="object-contain"
-                            priority
-                        />
-                    </div>
+        <div className="flex min-h-screen bg-[#f8fafc]">
+            {/* モバイル用ナビゲーションヘッダー */}
+            <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-16 glass flex items-center justify-between px-6 border-b border-gray-200/50">
+                <div className="flex items-center gap-3">
+                    <BookOpen className="w-6 h-6 text-blue-600" />
+                    <span className="font-bold text-slate-800 tracking-tight">Coyasu Manual</span>
                 </div>
-                <h1 className="text-3xl md:text-4xl font-extrabold text-blue-900 tracking-tight">
-                    中目黒コヤス歯科 スタッフ専用マニュアル
-                </h1>
-                <p className="text-gray-500 mt-3 font-medium">
-                    各項目の「更新コメントを送る」から変更要望を書くと、AIが自動でマニュアル本編を最新化します。
-                </p>
-            </header>
-
-            <div className="space-y-8">
-                {sections.map((sec, idx) => {
-                    // DropboxのRead-Onlyエリア（第5章として定義した部分）はコメントボタンを出さない
-                    const isReadOnly = sec.includes("Webマニュアル自動更新対象外");
-
-                    return (
-                        <section
-                            key={idx}
-                            className={`bg-white rounded-2xl shadow-sm border p-6 md:p-8 relative group ${isReadOnly ? "border-red-200 bg-red-50/20" : "border-gray-200 hover:border-blue-300 transition-colors"
-                                }`}
-                        >
-                            <article className="prose prose-sm sm:prose-base prose-blue max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{sec}</ReactMarkdown>
-                            </article>
-
-                            {!isReadOnly && (
-                                <div className="mt-6 pt-4 border-t border-gray-100 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={() => {
-                                            setSelectedSection(sec);
-                                            setComment("");
-                                            setMessage("");
-                                        }}
-                                        className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 text-sm font-semibold rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                                    >
-                                        📝AIに更新コメントを送る
-                                    </button>
-                                </div>
-                            )}
-                        </section>
-                    );
-                })}
+                <button
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                    {isSidebarOpen ? <X /> : <Menu />}
+                </button>
             </div>
 
-            {/* スティッキーなフッター */}
-            <footer className="mt-16 text-center text-sm text-gray-400">
-                <p>&copy; {new Date().getFullYear()} Nakameguro Coyasu Dental Clinic.</p>
-            </footer>
-
-            {/* モーダルウィンドウ */}
-            {selectedSection && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-gray-100">
-                            <h3 className="text-xl font-bold text-gray-900">マニュアルの自動更新（AI改訂）</h3>
-                            <p className="text-sm text-gray-500 mt-1">
-                                右下の送信ボタンを押すと、AIが元の文章をあなたの要望に合わせて書き換えます。
-                            </p>
+            {/* サイドバー (目次) */}
+            <aside className={cn(
+                "fixed inset-y-0 left-0 z-50 w-[var(--sidebar-w)] bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto",
+                isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+            )}>
+                <div className="sticky top-0 h-screen flex flex-column py-8 overflow-y-auto px-4 scrollbar-hide">
+                    <div className="flex items-center gap-4 mb-10 px-4">
+                        <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
+                            <BookOpen className="w-6 h-6 text-white" />
                         </div>
-
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    更新対象の文章（AIが読み取ります）
-                                </label>
-                                <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-500 h-40 overflow-y-auto border border-gray-200">
-                                    {selectedSection}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    変更内容・要望を（話し言葉でOK）入力してください
-                                </label>
-                                <textarea
-                                    className="w-full p-4 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none text-gray-800"
-                                    rows={4}
-                                    placeholder="例：初診時の持ち物に『保険証とマイナンバーカード』の両方を記載するように変更して！"
-                                    value={comment}
-                                    onChange={(e) => setComment(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                            </div>
-
-                            {message && (
-                                <div className={`p-4 rounded-lg text-sm font-medium animate-in slide-in-from-bottom-2 ${message.includes("❌") ? "bg-red-50 text-red-700 border border-red-200" : "bg-blue-50 text-blue-800 border border-blue-200"
-                                    }`}>
-                                    {message}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="p-6 bg-gray-50 border-t flex justify-end gap-3 sticky bottom-0">
-                            <button
-                                onClick={() => setSelectedSection(null)}
-                                className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                                disabled={isLoading}
-                            >
-                                キャンセル
-                            </button>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={isLoading || !comment.trim()}
-                                className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            >
-                                {isLoading ? (
-                                    <>
-                                        <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        更新処理中...
-                                    </>
-                                ) : (
-                                    "✨ AIで更新する"
-                                )}
-                            </button>
+                        <div>
+                            <h2 className="font-bold text-slate-900 leading-tight">中目黒コヤス歯科</h2>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Web Manual System</p>
                         </div>
                     </div>
+
+                    <div className="mb-6 px-2">
+                        <div className="relative group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="マニュアルを検索..."
+                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <nav className="space-y-1 flex-1">
+                        <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">CHAPTERS</p>
+                        {titles.map((title, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => scrollToSection(idx)}
+                                className={cn(
+                                    "w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3",
+                                    activeSection === idx
+                                        ? "bg-blue-50 text-blue-700 shadow-sm shadow-blue-100/50"
+                                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                )}
+                            >
+                                <span className={cn(
+                                    "w-1.5 h-1.5 rounded-full",
+                                    activeSection === idx ? "bg-blue-600 animate-pulse" : "bg-slate-300"
+                                )} />
+                                {title}
+                            </button>
+                        ))}
+                    </nav>
+
+                    <div className="mt-8 pt-8 border-t border-slate-100 flex justify-center items-center gap-4 px-4 opacity-50">
+                        <Image src="/logos/nameco.png" alt="nameco" width={32} height={32} className="grayscale" />
+                        <Image src="/logos/migakuma.png" alt="migakuma" width={28} height={28} className="grayscale" />
+                    </div>
                 </div>
-            )}
+            </aside>
+
+            {/* メインコンテンツ */}
+            <main className="flex-1 lg:max-w-none pt-24 lg:pt-0">
+                <div className="max-w-4xl mx-auto py-12 px-6 lg:px-12">
+                    <header className="mb-16 text-center lg:text-left">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6 }}
+                        >
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold mb-4">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+                                </span>
+                                AI-Powered Update Enabled
+                            </div>
+                            <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-6">
+                                スタッフ専用<br className="sm:hidden" />
+                                <span className="text-blue-600">自動更新マニュアル</span>
+                            </h1>
+                            <p className="text-lg text-slate-500 max-w-2xl leading-relaxed">
+                                現場の気づきをAIが形にする。最新のプロトコルを常に手元に。
+                                気になる項目は「AIに更新指示」を送るだけで、マニュアルが自動的に最新化されます。
+                            </p>
+                        </motion.div>
+                    </header>
+
+                    <div className="space-y-12">
+                        {sections.map((sec, idx) => {
+                            const isReadOnly = sec.includes("Webマニュアル自動更新対象外");
+                            const isFiltered = filteredSections.includes(sec);
+
+                            if (searchQuery && !isFiltered) return null;
+
+                            return (
+                                <motion.section
+                                    key={idx}
+                                    ref={(el) => { sectionRefs.current[idx] = el; }}
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    whileInView={{ opacity: 1, scale: 1 }}
+                                    viewport={{ once: true, margin: "-100px" }}
+                                    className={cn(
+                                        "bg-white rounded-3xl p-8 md:p-10 border shadow-sm transition-all duration-300",
+                                        activeSection === idx ? "border-blue-200 ring-4 ring-blue-50 shadow-xl shadow-blue-100/20" : "border-slate-100"
+                                    )}
+                                >
+                                    <article className="prose prose-slate prose-blue max-w-none prose-headings:font-black prose-headings:tracking-tight prose-a:text-blue-600 prose-strong:text-slate-900 prose-img:rounded-2xl">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{sec}</ReactMarkdown>
+                                    </article>
+
+                                    {!isReadOnly && (
+                                        <div className="mt-10 flex justify-end">
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedSection(sec);
+                                                    setComment("");
+                                                    setMessage("");
+                                                }}
+                                                className="group relative inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white text-sm font-bold rounded-2xl hover:bg-blue-600 transition-all hover:shadow-xl hover:shadow-blue-200"
+                                            >
+                                                <Edit3 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                                この項目をAIに更新指示する
+                                                <div className="absolute inset-0 rounded-2xl ring-2 ring-slate-900 group-hover:ring-blue-600 transition-all scale-105 opacity-0 group-hover:opacity-10" />
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {isReadOnly && (
+                                        <div className="mt-8 p-4 bg-orange-50 border border-orange-100 rounded-2xl flex items-center gap-3">
+                                            <AlertCircle className="w-5 h-5 text-orange-400" />
+                                            <span className="text-sm font-bold text-orange-700">この項目は外部連携中のため Web からの更新は制限されています</span>
+                                        </div>
+                                    )}
+                                </motion.section>
+                            );
+                        })}
+                    </div>
+
+                    <footer className="mt-24 pt-12 border-t border-slate-100 text-center">
+                        <div className="flex justify-center items-center gap-6 mb-8 mb-8 opacity-20 hover:opacity-100 transition-opacity duration-700">
+                            <Image src="/logos/nameco.png" alt="nameco" width={48} height={48} />
+                            <Image src="/logos/migakuma.png" alt="migakuma" width={42} height={42} />
+                        </div>
+                        <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">
+                            &copy; {new Date().getFullYear()} Nakameguro Coyasu Dental Clinic. Powered by Gemini AI.
+                        </p>
+                    </footer>
+                </div>
+            </main>
+
+            {/* 更新モーダル */}
+            <AnimatePresence>
+                {selectedSection && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => !isLoading && setSelectedSection(null)}
+                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+                        >
+                            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-100">
+                                        <MessageSquare className="text-white w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-900 leading-tight">AIに改訂を依頼する</h3>
+                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">AI Automated Revision</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedSection(null)}
+                                    className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+                                    disabled={isLoading}
+                                >
+                                    <X className="w-6 h-6 text-slate-400" />
+                                </button>
+                            </div>
+
+                            <div className="p-8 space-y-6 overflow-y-auto flex-1">
+                                <div>
+                                    <label className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
+                                        Target Context
+                                    </label>
+                                    <div className="bg-slate-50 p-6 rounded-[1.5rem] text-sm text-slate-500 italic border border-slate-100 max-h-40 overflow-y-auto leading-relaxed">
+                                        {selectedSection}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-3">
+                                        Change Instructions (話し言葉でOK)
+                                    </label>
+                                    <textarea
+                                        className="w-full p-6 bg-white border-2 border-slate-100 rounded-[1.5rem] focus:outline-none focus:border-blue-600 transition-all resize-none text-slate-800 text-lg leading-relaxed placeholder:text-slate-300 shadow-sm"
+                                        rows={4}
+                                        placeholder="例：初診時の持ち物に『マイナンバーカード』を追加して、一番目立つように書いて！"
+                                        value={comment}
+                                        onChange={(e) => setComment(e.target.value)}
+                                        disabled={isLoading}
+                                    />
+                                </div>
+
+                                {message && (
+                                    <motion.div
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className={cn(
+                                            "p-6 rounded-2xl flex items-center gap-4 border",
+                                            message.includes("❌") ? "bg-red-50 border-red-100 text-red-700" : "bg-blue-50 border-blue-100 text-blue-800"
+                                        )}
+                                    >
+                                        {message.includes("❌") ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle2 className="w-5 h-5 flex-shrink-0 animate-bounce" />}
+                                        <span className="text-sm font-black">{message}</span>
+                                    </motion.div>
+                                )}
+                            </div>
+
+                            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-4 sticky bottom-0">
+                                <button
+                                    onClick={() => setSelectedSection(null)}
+                                    className="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                                    disabled={isLoading}
+                                >
+                                    キャンセル
+                                </button>
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={isLoading || !comment.trim()}
+                                    className="relative overflow-hidden px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed group transition-all"
+                                >
+                                    {isLoading ? (
+                                        <div className="flex items-center gap-3">
+                                            <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            AI思考中...
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            AIに更新を指示する
+                                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                        </div>
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
