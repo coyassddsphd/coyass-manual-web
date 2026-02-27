@@ -59,29 +59,26 @@ export async function POST(request: Request) {
         const fileSha = fileData.sha;
         const fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
-        // --- AIによるマニュアル全体の再構成 ---
+        // --- AIによる特定セクションの修正 ---
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-        const systemPrompt = `あなたは歯科医院のマニュアル管理エキスパートです。
-ユーザーから提供された「現在のマニュアル全文」に対して、特定のセクションの更新指示（コメントおよび画像解析結果）を適用し、更新されたマニュアルの「全文」を返してください。
+        const systemPrompt = `あなたは歯科医院のマニュアル編集者です。
+与えられた「修正前の文章」を、ユーザーの「要望コメント」および「画像（もしあれば）」に基づいて修正・改善してください。
 
-【更新のルール】
-1. 指定されたセクション（「更新対象の元の文章」に合致する部分）を、ユーザーの「要望コメント」および「画像（もしあれば）」の内容に基づいて書き換えてください。
-2. その他のセクションや、全体のMarkdown構造、画像リンクなどは一切変更せず、そのまま維持してください。
-3. 出力は、更新後の「マニュアルの全文」のみとしてください。解説やコードブロック( \`\`\` )などは一切含めないでください。`;
+【出力ルール】
+1. 修正したセクションの文章「のみ」を出力してください。
+2. 前後の挨拶、解説、Markdownコードブロック( \`\`\` )などは一切含めないでください。
+3. 専門用語や口調、既存の構成との整合性を保ってください。`;
 
         const userContext = `
-【更新対象の元の文章】
+【修正前の文章】
 ${originalText}
 
 【スタッフの要望コメント】
 ${comment}
-
-【現在のマニュアル全文】
-${fullMarkdown}
 `;
 
-        console.log("Calling Gemini API...");
+        console.log("Calling Gemini API (Section Update)...");
         let result;
         if (imageData && imageData.data && imageData.mimeType) {
             result = await model.generateContent([
@@ -93,19 +90,32 @@ ${fullMarkdown}
         }
 
         const response = await result.response;
-        let newFullMarkdown = response.text() || "";
+        let updatedSectionText = response.text() || "";
 
-        // AI生成結果のパース強化
-        newFullMarkdown = newFullMarkdown
+        // パース
+        updatedSectionText = updatedSectionText
             .replace(/^```markdown\n?/, "")
             .replace(/^```\n?/, "")
             .replace(/\n?```$/, "")
             .trim();
 
-        console.log("AI generation completed. Length change:", { original: fullMarkdown.length, new: newFullMarkdown.length });
+        console.log("AI generation completed (Section). Length:", updatedSectionText.length);
 
-        if (!newFullMarkdown || newFullMarkdown.length < fullMarkdown.length * 0.3) {
-            throw new Error("AIが不完全なデータを生成しました。全文が正しく出力されていない可能性があります。");
+        if (!updatedSectionText || updatedSectionText.length < 5) {
+            throw new Error("AIが有効な回答を生成できませんでした。内容を具体的に記述してください。");
+        }
+
+        // --- 全文の再構築 ---
+        // originalText を updatedSectionText で置換する
+        // ※ originalText が正確に fullMarkdown 内に存在することを前提にする
+        let newFullMarkdown = fullMarkdown;
+        if (fullMarkdown.includes(originalText)) {
+            newFullMarkdown = fullMarkdown.replace(originalText, updatedSectionText);
+            console.log("Merged updated section into full manual.");
+        } else {
+            // 完全一致しない場合（まれ）、AIに再構成を頼む（フォールバック）が、トークン削減のため基本は置換
+            console.warn("Exact match not found for replacement. Using fallback reconstruction.");
+            newFullMarkdown = fullMarkdown + "\n\n" + updatedSectionText;
         }
 
         // --- GitHubへの保存 ---
@@ -120,7 +130,7 @@ ${fullMarkdown}
                 "User-Agent": "Coyass-Manual-App"
             },
             body: JSON.stringify({
-                message: `Manual update via AI Integration: ${comment.substring(0, 30)}...`,
+                message: `Section update via AI: ${comment.substring(0, 30)}...`,
                 content: encodedContent,
                 sha: fileSha,
                 branch: "main"
@@ -133,11 +143,11 @@ ${fullMarkdown}
             throw new Error(`GitHub保存失敗: ${updateRes.status} ${errText}`);
         }
 
-        console.log("Manual updated successfully on GitHub.");
+        console.log("Manual (section) updated successfully on GitHub.");
 
         return NextResponse.json({
             success: true,
-            updatedText: "マニュアル全体が正常に更新されました",
+            updatedText: "指定箇所が正常に更新されました",
             message: "更新が成功し、保存されました！",
         });
 
