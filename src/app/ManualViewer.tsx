@@ -43,7 +43,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                     window.location.reload();
                 }, 1500);
             } else {
-                setMessage("❌ エラー: " + (data.error || "不明なエラー"));
+                setMessage("❌ エラー: " + (data.error || "不明なエラー") + (data.details ? `\n(${data.details})` : ""));
                 setIsLoading(false);
             }
         } catch (error) {
