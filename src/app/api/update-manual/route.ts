@@ -30,8 +30,8 @@ export async function POST(request: Request) {
         let fullMarkdown = "";
         let fileSha = ""; // 後でGitHubコミット用に使う
         const githubToken = process.env.GITHUB_TOKEN;
-        const repoOwner = "drcoyass";
-        const repoName = "coyasu-manual";
+        const repoOwner = "coyassddsphd";
+        const repoName = "coyasu-manual-web";
         const filePathInRepo = "manual_blueprint.md";
 
         if (!githubToken) {
