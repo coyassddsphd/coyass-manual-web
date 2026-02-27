@@ -73,13 +73,71 @@ ${comment}`;
         // 元のファイルの該当部分を置換
         const newFullMarkdown = fullMarkdown.replace(originalText, updatedText);
 
-        // ファイルを上書き保存
-        fs.writeFileSync(filePath, newFullMarkdown, "utf-8");
+        // Vercelなどの本番環境ではファイルシステムが読み取り専用のため、GitHub API経由で保存する
+        const githubToken = process.env.GITHUB_TOKEN;
+
+        if (githubToken) {
+            // 1. まず現在のファイルのSHA（ハッシュ）を取得する
+            const repoOwner = "drcoyass";
+            const repoName = "coyasu-manual";
+            const filePathInRepo = "manual_blueprint.md";
+            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePathInRepo}`;
+
+            const getFileRes = await fetch(apiUrl, {
+                headers: {
+                    "Authorization": `token ${githubToken}`,
+                    "Accept": "application/vnd.github.v3+json",
+                }
+            });
+
+            if (!getFileRes.ok) {
+                console.error("GitHubからのファイル情報取得に失敗:", await getFileRes.text());
+                throw new Error("GitHubからのファイル情報取得に失敗しました");
+            }
+
+            const fileData = await getFileRes.json();
+            const fileSha = fileData.sha;
+
+            // 2. 新しい内容をBase64にエンコードして上書きコミット（PUT）する
+            // Node.jsのBufferを使ってUTF-8の文字列をBase64に変換
+            const encodedContent = Buffer.from(newFullMarkdown, 'utf-8').toString('base64');
+
+            const updateRes = await fetch(apiUrl, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${githubToken}`,
+                    "Accept": "application/vnd.github.v3+json",
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    message: `Update manual via AI by staff comment: ${comment.substring(0, 30)}...`,
+                    content: encodedContent,
+                    sha: fileSha,
+                    branch: "main"
+                })
+            });
+
+            if (!updateRes.ok) {
+                console.error("GitHubへのコミットに失敗:", await updateRes.text());
+                throw new Error("GitHubへのコミット（保存）に失敗しました");
+            }
+
+            // ローカルでも一応保存を試みる（ローカル開発用）
+            try {
+                fs.writeFileSync(filePath, newFullMarkdown, "utf-8");
+            } catch (fsError) {
+                console.log("ローカルファイルへの書き込みはスキップされました（Vercel環境など）");
+            }
+
+        } else {
+            // GITHUB_TOKENがない場合は従来のローカルファイル保存のみ（ローカル開発環境用）
+            fs.writeFileSync(filePath, newFullMarkdown, "utf-8");
+        }
 
         return NextResponse.json({
             success: true,
             updatedText: updatedText,
-            message: "マニュアルが自動更新されました",
+            message: "マニュアルが自動更新され、クラウドに保存されました！反映まで1〜2分お待ちください。",
         });
     } catch (error: unknown) {
         console.error("API Error:", error);
