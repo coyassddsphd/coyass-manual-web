@@ -84,20 +84,60 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
         return () => observer.disconnect();
     }, [sections]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const resizeImage = (file: File): Promise<{ data: string, mimeType: string, previewUrl: string }> => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 1200;
+                    if (width > height) {
+                        if (width > maxDim) {
+                            height *= maxDim / width;
+                            width = maxDim;
+                        }
+                    } else {
+                        if (height > maxDim) {
+                            width *= maxDim / height;
+                            height = maxDim;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    resolve({
+                        data: dataUrl.split(',')[1],
+                        mimeType: 'image/jpeg',
+                        previewUrl: dataUrl
+                    });
+                };
+                img.src = e.target?.result as string;
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64String = reader.result as string;
-            setAttachedImage({
-                data: base64String.split(",")[1],
-                mimeType: file.type,
-                previewUrl: base64String
-            });
-        };
-        reader.readAsDataURL(file);
+        setIsLoading(true);
+        setMessage("画像を最適化中...");
+        try {
+            const resized = await resizeImage(file);
+            setAttachedImage(resized);
+            setMessage("");
+        } catch (err) {
+            console.error("Image resize error:", err);
+            setMessage("❌ 画像の読み込みに失敗しました");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSubmit = async () => {
@@ -276,6 +316,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                         <ReactMarkdown
                                             remarkPlugins={[remarkGfm]}
                                             components={{
+                                                p: ({ children }) => <div className="mb-6 leading-relaxed">{children}</div>,
                                                 img: ({ src, alt }) => {
                                                     const isLogo = alt?.includes("ロゴ") || alt?.includes("logo");
                                                     return (
@@ -292,7 +333,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                             )}
                                                             {!isReadOnly && (
                                                                 <button
-                                                                    onClick={() => {
+                                                                    onClick={async () => {
                                                                         const input = document.createElement('input');
                                                                         input.type = 'file';
                                                                         input.accept = 'image/*';
@@ -300,36 +341,34 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                                             const file = (e.target as HTMLInputElement).files?.[0];
                                                                             if (!file) return;
                                                                             setIsLoading(true);
-                                                                            setMessage("画像をアップロード中...");
-                                                                            const reader = new FileReader();
-                                                                            reader.onloadend = async () => {
-                                                                                const base64 = reader.result as string;
-                                                                                try {
-                                                                                    const res = await fetch("/api/update-manual", {
-                                                                                        method: "POST",
-                                                                                        headers: { "Content-Type": "application/json" },
-                                                                                        body: JSON.stringify({
-                                                                                            originalText: sec,
-                                                                                            comment: "画像を更新しました",
-                                                                                            imageData: {
-                                                                                                data: base64.split(",")[1],
-                                                                                                mimeType: file.type
-                                                                                            }
-                                                                                        }),
-                                                                                    });
-                                                                                    if (res.ok) {
-                                                                                        setMessage("✅ 画像を更新しました！リロードします...");
-                                                                                        setTimeout(() => { window.location.reload(); }, 2000);
-                                                                                    } else {
-                                                                                        setMessage("❌ 更新失敗");
-                                                                                        setIsLoading(false);
-                                                                                    }
-                                                                                } catch (err) {
-                                                                                    setMessage("❌ エラー");
+                                                                            setMessage("画像を最適化してアップロード中...");
+                                                                            try {
+                                                                                const resized = await resizeImage(file);
+                                                                                const res = await fetch("/api/update-manual", {
+                                                                                    method: "POST",
+                                                                                    headers: { "Content-Type": "application/json" },
+                                                                                    body: JSON.stringify({
+                                                                                        originalText: sec,
+                                                                                        comment: "画像を更新しました",
+                                                                                        imageData: {
+                                                                                            data: resized.data,
+                                                                                            mimeType: resized.mimeType
+                                                                                        }
+                                                                                    }),
+                                                                                });
+                                                                                if (res.ok) {
+                                                                                    setMessage("✅ 画像を更新しました！リロードします...");
+                                                                                    setTimeout(() => { window.location.reload(); }, 2000);
+                                                                                } else {
+                                                                                    const errData = await res.json();
+                                                                                    setMessage("❌ 更新失敗: " + (errData.details || "サーバーエラー"));
                                                                                     setIsLoading(false);
                                                                                 }
-                                                                            };
-                                                                            reader.readAsDataURL(file);
+                                                                            } catch (err) {
+                                                                                console.error("In-line update error:", err);
+                                                                                setMessage("❌ エラーが発生しました");
+                                                                                setIsLoading(false);
+                                                                            }
                                                                         };
                                                                         input.click();
                                                                     }}
