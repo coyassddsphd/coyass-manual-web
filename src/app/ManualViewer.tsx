@@ -148,7 +148,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
             <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-16 glass flex items-center justify-between px-6 border-b border-gray-200/50">
                 <div className="flex items-center gap-3">
                     <BookOpen className="w-6 h-6 text-blue-600" />
-                    <span className="font-bold text-slate-800 tracking-tight">Coyasu Manual</span>
+                    <span className="font-bold text-slate-800 tracking-tight">Coyass Manual</span>
                 </div>
                 <button
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -265,7 +265,83 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                     )}
                                 >
                                     <article className="prose prose-slate prose-blue max-w-none prose-headings:font-black prose-headings:tracking-tight prose-a:text-blue-600 prose-strong:text-slate-900 prose-img:rounded-2xl">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{sec}</ReactMarkdown>
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                                img: ({ node, ...props }) => (
+                                                    <div className="relative group/img-container my-8">
+                                                        <img {...props} className="rounded-2xl shadow-lg w-full object-cover max-h-[400px]" alt={props.alt || "manual image"} />
+                                                        {!isReadOnly && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    // 画像差し替えのフローを開始
+                                                                    const input = document.createElement('input');
+                                                                    input.type = 'file';
+                                                                    input.accept = 'image/*';
+                                                                    input.onchange = async (e) => {
+                                                                        const file = (e.target as HTMLInputElement).files?.[0];
+                                                                        if (!file) return;
+
+                                                                        setIsLoading(true);
+                                                                        setMessage("画像をアップロード中...");
+
+                                                                        const reader = new FileReader();
+                                                                        reader.onloadend = async () => {
+                                                                            const base64 = (reader.result as string).split(',')[1];
+                                                                            try {
+                                                                                // 1. 画像をGitHubにアップロード
+                                                                                const newFileName = `real_${Date.now()}_${file.name}`;
+                                                                                const uploadRes = await fetch("/api/upload-image", {
+                                                                                    method: "POST",
+                                                                                    headers: { "Content-Type": "application/json" },
+                                                                                    body: JSON.stringify({
+                                                                                        imageData: base64,
+                                                                                        imagePath: `public/images/manual/${newFileName}`,
+                                                                                        comment: `Replaced ${props.src} with real photo`
+                                                                                    }),
+                                                                                });
+
+                                                                                if (!uploadRes.ok) throw new Error("アップロード失敗");
+
+                                                                                // 2. マニュアルのマークダウンを更新（AIに依頼）
+                                                                                setMessage("マニュアルのリンクを更新中...");
+                                                                                const updateRes = await fetch("/api/update-manual", {
+                                                                                    method: "POST",
+                                                                                    headers: { "Content-Type": "application/json" },
+                                                                                    body: JSON.stringify({
+                                                                                        originalText: sec,
+                                                                                        comment: `画像「${props.src}」を「/images/manual/${newFileName}」に差し替えてください。`,
+                                                                                        imageData: null
+                                                                                    }),
+                                                                                });
+
+                                                                                if (updateRes.ok) {
+                                                                                    setMessage("✅ 画像を差し替えました！反映まで数分かかる場合があります。");
+                                                                                    setTimeout(() => window.location.reload(), 2000);
+                                                                                } else {
+                                                                                    throw new Error("リンク更新失敗");
+                                                                                }
+                                                                            } catch (err) {
+                                                                                setMessage("❌ 差し替えに失敗しました。時間をおいてお試しください。");
+                                                                                setIsLoading(false);
+                                                                            }
+                                                                        };
+                                                                        reader.readAsDataURL(file);
+                                                                    };
+                                                                    input.click();
+                                                                }}
+                                                                className="absolute top-4 right-4 bg-white/90 backdrop-blur shadow-xl text-blue-600 px-4 py-2 rounded-xl text-xs font-black opacity-0 group-hover/img-container:opacity-100 transition-all flex items-center gap-2 hover:bg-blue-600 hover:text-white border border-blue-100"
+                                                            >
+                                                                <Camera className="w-4 h-4" />
+                                                                実際の写真に差し替える
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )
+                                            }}
+                                        >
+                                            {sec}
+                                        </ReactMarkdown>
                                     </article>
 
                                     {!isReadOnly && (
