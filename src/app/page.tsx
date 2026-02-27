@@ -1,6 +1,4 @@
 import ManualViewer from "./ManualViewer";
-import fs from "fs";
-import path from "path";
 
 // キャッシュを無効化し、常に最新のマニュアルを反映させる
 export const dynamic = 'force-dynamic';
@@ -38,15 +36,9 @@ export default async function Home() {
       markdownContent = "マニュアル取得時にサーバーエラーが発生しました。";
     }
   } else {
-    // ローカル環境等のフォールバック
-    try {
-      const filePath = path.join(process.cwd(), "manual_blueprint.md");
-      if (fs.existsSync(filePath)) {
-        markdownContent = fs.readFileSync(filePath, "utf-8");
-      }
-    } catch (e) {
-      console.error("Local file read error:", e);
-    }
+    // ローカル環境等でGITHUB_TOKENがない場合（Vercelではこの分岐には入らない想定）
+    markdownContent = "GITHUB_TOKENが設定されていません。環境変数を確認してください。";
+    console.error("GITHUB_TOKEN is not set.");
   }
 
   return (
