@@ -39,6 +39,24 @@ export async function POST(request: Request) {
             console.log("新規ファイルとして作成します");
         }
 
+        // --- 最新のSHAを再取得 (409 Conflict回避) ---
+        let finalSha = sha;
+        try {
+            const reGetRes = await fetch(apiUrl, {
+                headers: {
+                    "Authorization": `token ${githubToken}`,
+                    "Accept": "application/vnd.github.v3+json",
+                },
+                cache: 'no-store'
+            });
+            if (reGetRes.ok) {
+                const reGetData = await reGetRes.json();
+                finalSha = reGetData.sha;
+            }
+        } catch (e) {
+            // 新規作成の場合はSHAなしでOK
+        }
+
         // --- GitHubへアップロード ---
         const updateRes = await fetch(apiUrl, {
             method: "PUT",
@@ -50,7 +68,7 @@ export async function POST(request: Request) {
             body: JSON.stringify({
                 message: `Image updated: ${comment || "User upload"}`,
                 content: imageData, // Base64
-                sha: sha,
+                sha: finalSha,
                 branch: "main"
             })
         });
