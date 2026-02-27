@@ -56,7 +56,6 @@ export async function POST(request: Request) {
         }
 
         const fileData = await getFileRes.json();
-        const fileSha = fileData.sha;
         const fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
         // --- AIによる特定セクションの修正 ---
@@ -136,7 +135,24 @@ ${comment}
             newFullMarkdown = fullMarkdown + "\n\n" + updatedSectionText;
         }
 
-        // --- GitHubへの保存 ---
+        // --- GitHubへの保存 (最新のSHAを再取得して409 Conflictを回避) ---
+        console.log("Refetching latest SHA to avoid 409 Conflict...");
+        const latestFileRes = await fetch(apiUrl, {
+            headers: {
+                "Authorization": `Bearer ${githubToken}`,
+                "Accept": "application/vnd.github.v3+json",
+                "User-Agent": "Coyass-Manual-App"
+            },
+            cache: 'no-store'
+        });
+
+        if (!latestFileRes.ok) {
+            throw new Error("保存直前の最新SHA取得に失敗しました");
+        }
+
+        const latestFileData = await latestFileRes.json();
+        const latestSha = latestFileData.sha;
+
         const encodedContent = Buffer.from(newFullMarkdown, 'utf-8').toString('base64');
 
         const updateRes = await fetch(apiUrl, {
@@ -150,7 +166,7 @@ ${comment}
             body: JSON.stringify({
                 message: `Section update via AI: ${comment.substring(0, 30)}...`,
                 content: encodedContent,
-                sha: fileSha,
+                sha: latestSha, // 最新のSHAを使用
                 branch: "main"
             })
         });
@@ -178,6 +194,8 @@ ${comment}
             details = "現在AIの利用制限がかかっています。1分ほど待ってから再度お試しいただくか、Google AI Studioで有料プランへの切り替えをご検討ください。";
         } else if (errorMessage.includes("404")) {
             details = "AIモデルのメンテナンス中です。システム管理者にモデル設定の更新を依頼してください。";
+        } else if (errorMessage.includes("409")) {
+            details = "他のユーザーが同時に更新したため、競合が発生しました。一度ページをリロードして、もう一度お試しください。";
         }
 
         return NextResponse.json(
