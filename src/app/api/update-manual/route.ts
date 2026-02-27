@@ -23,20 +23,51 @@ export async function POST(request: Request) {
             );
         }
 
-        // マニュアルのパス
-        const filePath = path.join(process.cwd(), "manual_blueprint.md");
-        if (!fs.existsSync(filePath)) {
-            // パスが見つからない場合は、どこを探したかの詳細も返す
-            return NextResponse.json(
-                {
-                    error: "マニュアルファイル(manual_blueprint.md)が見つかりません",
-                    details: `探したパス: ${filePath} \n現在のディレクトリ: ${process.cwd()}`
-                },
-                { status: 404 }
-            );
-        }
+        // --- 1. マニュアルの現在のテキストを取得 ---
+        let fullMarkdown = "";
+        let fileSha = ""; // 後でGitHubコミット用に使う
+        const githubToken = process.env.GITHUB_TOKEN;
+        const repoOwner = "drcoyass";
+        const repoName = "coyasu-manual";
+        const filePathInRepo = "manual_blueprint.md";
 
-        const fullMarkdown = fs.readFileSync(filePath, "utf-8");
+        if (githubToken) {
+            // Vercel本番環境：GitHub API経由で直接ファイルを取得する (EROFSエラー回避)
+            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePathInRepo}`;
+            const getFileRes = await fetch(apiUrl, {
+                headers: {
+                    "Authorization": `token ${githubToken}`,
+                    "Accept": "application/vnd.github.v3+json",
+                }
+            });
+
+            if (!getFileRes.ok) {
+                console.error("GitHubからのファイル情報取得に失敗:", await getFileRes.text());
+                return NextResponse.json(
+                    { error: "Vercel環境：GitHubからのマニュアルファイル取得に失敗しました。" },
+                    { status: 500 }
+                );
+            }
+
+            const fileData = await getFileRes.json();
+            fileSha = fileData.sha;
+            // GitHubのcontentはBase64エンコードされているのでデコードする
+            fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
+
+        } else {
+            // ローカル開発環境：fsを使って直接読み込む
+            const filePath = path.join(process.cwd(), "manual_blueprint.md");
+            if (!fs.existsSync(filePath)) {
+                return NextResponse.json(
+                    {
+                        error: "マニュアルファイル(manual_blueprint.md)が見つかりません",
+                        details: `探したパス: ${filePath} \n現在のディレクトリ: ${process.cwd()}`
+                    },
+                    { status: 404 }
+                );
+            }
+            fullMarkdown = fs.readFileSync(filePath, "utf-8");
+        }
 
         // 指定されたテキストが存在するか確認
         if (!fullMarkdown.includes(originalText)) {
@@ -78,32 +109,9 @@ ${comment}`;
         const newFullMarkdown = fullMarkdown.replace(originalText, updatedText);
 
         // Vercelなどの本番環境ではファイルシステムが読み取り専用のため、GitHub API経由で保存する
-        const githubToken = process.env.GITHUB_TOKEN;
-
         if (githubToken) {
-            // 1. まず現在のファイルのSHA（ハッシュ）を取得する
-            const repoOwner = "drcoyass";
-            const repoName = "coyasu-manual";
-            const filePathInRepo = "manual_blueprint.md";
             const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePathInRepo}`;
-
-            const getFileRes = await fetch(apiUrl, {
-                headers: {
-                    "Authorization": `token ${githubToken}`,
-                    "Accept": "application/vnd.github.v3+json",
-                }
-            });
-
-            if (!getFileRes.ok) {
-                console.error("GitHubからのファイル情報取得に失敗:", await getFileRes.text());
-                throw new Error("GitHubからのファイル情報取得に失敗しました");
-            }
-
-            const fileData = await getFileRes.json();
-            const fileSha = fileData.sha;
-
-            // 2. 新しい内容をBase64にエンコードして上書きコミット（PUT）する
-            // Node.jsのBufferを使ってUTF-8の文字列をBase64に変換
+            // 新しい内容をBase64にエンコードして上書きコミット（PUT）する
             const encodedContent = Buffer.from(newFullMarkdown, 'utf-8').toString('base64');
 
             const updateRes = await fetch(apiUrl, {
@@ -126,15 +134,15 @@ ${comment}`;
                 throw new Error("GitHubへのコミット（保存）に失敗しました");
             }
 
-            // ローカルでも一応保存を試みる（ローカル開発用）
+            // ローカルでも一応保存を試みる（Vercelではエラーになるので無視する）
             try {
+                const filePath = path.join(process.cwd(), "manual_blueprint.md");
                 fs.writeFileSync(filePath, newFullMarkdown, "utf-8");
-            } catch (fsError) {
-                console.log("ローカルファイルへの書き込みはスキップされました（Vercel環境など）");
-            }
+            } catch (e) { }
 
         } else {
             // GITHUB_TOKENがない場合は従来のローカルファイル保存のみ（ローカル開発環境用）
+            const filePath = path.join(process.cwd(), "manual_blueprint.md");
             fs.writeFileSync(filePath, newFullMarkdown, "utf-8");
         }
 
