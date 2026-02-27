@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Vercel Serverless Functionの設定
 export const dynamic = 'force-dynamic';
@@ -15,8 +15,8 @@ export async function POST(request: Request) {
             );
         }
 
-        // SDKの初期化
-        const genAI = new GoogleGenAI({ apiKey }) as any;
+        // SDKの初期化 (公式SDKは apiKey を引数に取る)
+        const genAI = new GoogleGenerativeAI(apiKey);
         const { originalText, comment, imageData } = await request.json();
 
         if (!originalText || !comment) {
