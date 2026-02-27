@@ -5,13 +5,6 @@ import { GoogleGenAI } from "@google/genai";
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-/**
- * テキストから空白や改行を除去して正規化する（比較用）
- */
-function normalize(text: string): string {
-    return text.replace(/[\s\n\r\t]+/g, "").trim();
-}
-
 export async function POST(request: Request) {
     try {
         const apiKey = process.env.GEMINI_API_KEY;
@@ -22,8 +15,8 @@ export async function POST(request: Request) {
             );
         }
 
-        // SDKの初期化 (型エラー回避のため any キャスト)
-        const genAI = new GoogleGenAI({ apiKey }) as any;
+        // SDKの初期化
+        const genAI = new GoogleGenAI(apiKey);
         const { originalText, comment, imageData } = await request.json();
 
         if (!originalText || !comment) {
@@ -64,93 +57,54 @@ export async function POST(request: Request) {
         const fileSha = fileData.sha;
         const fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
-        // --- 文言の照合 (もっと堅牢な置換ロジック) ---
-        let finalOutputMarkdown = "";
-        let targetIndex = fullMarkdown.indexOf(originalText);
-
-        if (targetIndex === -1) {
-            console.log("完全一致しなかったため、正規化照合を行います");
-            const normalizedOriginal = normalize(originalText);
-            const normalizedFull = normalize(fullMarkdown);
-
-            if (!normalizedFull.includes(normalizedOriginal)) {
-                return NextResponse.json(
-                    { error: "指定された文章がマニュアル内に見つかりません。リロードして最新状態を確認してください。" },
-                    { status: 400 }
-                );
-            }
-
-            // 正規化で見つかった場合、ブラウザから送られた改行コード等の差異を修正
-            // ここでは RegExp を使って空白文字を柔軟にマッチさせる
-            const escaped = originalText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(escaped.replace(/[\s\n\r\t]+/g, '[\\s\\n\\r\\t]+'), 'm');
-            const match = fullMarkdown.match(regex);
-
-            if (match && typeof match.index === 'number') {
-                targetIndex = match.index;
-                // マッチした部分の文字数で正確に置換
-                const matchedText = match[0];
-                console.log("正規化マッチ成功、位置を特定しました。");
-
-                // 置換準備（後のロジックで targetIndex が使われる）
-                // originalText.length の代わりに matchedText.length を使う必要があるため調整
-            }
-        }
-
-        // --- AIによるマルチモーダル解析 ---
+        // --- AIによるマニュアル全体の再構成 ---
+        // 従来の「部分置換」ではなく「全体生成」に切り替えることで、照合エラーを回避
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-        const prompt = `あなたは歯科医院のマニュアルを編集する優秀なAIアシスタントです。
-以下の指示に従って、マニュアルを更新してください。
+        const systemPrompt = `あなたは歯科医院のマニュアル管理エキスパートです。
+ユーザーから提供された「現在のマニュアル全文」に対して、特定のセクションの更新指示（コメントおよび画像解析結果）を適用し、更新されたマニュアルの「全文」を返してください。
 
-【指示】
-1. スタッフの【要望コメント】を最優先に反映してください。
-2. もし【画像データ】が提供されている場合、その内容を読み取ってマニュアルに形式に変換して組み込んでください。
-3. 【元のマニュアル部分】をベースに、新しく書き直したテキストだけを出力してください。
+【更新のルール】
+1. 指定されたセクション（「更新対象の元の文章」に合致する部分）を、ユーザーの「要望コメント」および「画像（もしあれば）」の内容に基づいて書き換えてください。
+2. その他のセクションや、全体のMarkdown構造、画像リンクなどは一切変更せず、そのまま維持してください。
+3. 出力は、更新後の「マニュアルの全文」のみとしてください。解説やコードブロック( \`\`\` )などは一切含めないでください。`;
 
-【制約】
-- Markdownの書式を維持してください。
-- 解説、挨拶、コードブロック( \`\`\` )などは一切出力しないでください。変更後のテキストそのものだけを出力してください。
-
-【元のマニュアル部分】
+        const userContext = `
+【更新対象の元の文章】
 ${originalText}
 
 【スタッフの要望コメント】
-${comment}`;
+${comment}
+
+【現在のマニュアル全文】
+${fullMarkdown}
+`;
 
         let result;
         if (imageData && imageData.data && imageData.mimeType) {
+            // 画像データがある場合はマルチモーダルで処理
             result = await model.generateContent([
-                prompt,
+                systemPrompt + userContext,
                 { inlineData: { data: imageData.data, mimeType: imageData.mimeType } }
             ]);
         } else {
-            result = await model.generateContent(prompt);
+            // テキスト指示のみの場合
+            result = await model.generateContent(systemPrompt + userContext);
         }
 
         const response = await result.response;
-        let updatedText = response.text() || "";
-        // 不要な装飾を除去
-        updatedText = updatedText.replace(/^```markdown\n?/, "").replace(/\n?```$/, "").trim();
+        let newFullMarkdown = response.text() || "";
 
-        if (!updatedText) {
-            throw new Error("AIがテキストの生成に失敗しました");
+        // 余計な記号を削除
+        newFullMarkdown = newFullMarkdown.replace(/^```markdown\n?/, "").replace(/\n?```$/, "").trim();
+
+        if (!newFullMarkdown || newFullMarkdown.length < fullMarkdown.length * 0.5) {
+            // 生成された内容が極端に短い場合はエラー（AIが全文を返さなかった可能性）
+            throw new Error("AIがマニュアル全文の生成に失敗したか、不完全なデータを返しました。");
         }
 
-        // --- 保存処理 (最終マニュアルの組み立て) ---
-        if (targetIndex !== -1) {
-            // 見つかった場所を置換
-            // 正規化マッチの場合はマッチした全範囲を消す必要があるが、簡易的に originalText ベースで置換
-            // より安全にするため、String.replace ではなくスライス結合を使用
-            const escaped = originalText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(escaped.replace(/[\s\n\r\t]+/g, '[\\s\\n\\r\\t]+'), 'm');
-            finalOutputMarkdown = fullMarkdown.replace(regex, updatedText);
-        } else {
-            // 万が一位置が特定できない場合の最終手段: 単純置換
-            finalOutputMarkdown = fullMarkdown.replace(originalText, updatedText);
-        }
-
-        const encodedContent = Buffer.from(finalOutputMarkdown, 'utf-8').toString('base64');
+        // --- GitHubへの保存 ---
+        const encodedContent = Buffer.from(newFullMarkdown, 'utf-8').toString('base64');
 
         const updateRes = await fetch(apiUrl, {
             method: "PUT",
@@ -160,7 +114,7 @@ ${comment}`;
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                message: `Update via AI: ${comment.substring(0, 30)}...`,
+                message: `Manual update via AI Integration: ${comment.substring(0, 30)}...`,
                 content: encodedContent,
                 sha: fileSha,
                 branch: "main"
@@ -174,13 +128,15 @@ ${comment}`;
 
         return NextResponse.json({
             success: true,
-            updatedText: updatedText,
+            updatedText: "マニュアル全体が正常に更新されました",
             message: "更新が成功し、保存されました！",
         });
-    } catch (error: any) {
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "不明なサーバーエラー";
         console.error("API Error:", error);
         return NextResponse.json(
-            { error: "サーバーエラーが発生しました", details: error.message },
+            { error: "サーバーエラーが発生しました", details: errorMessage },
             { status: 500 }
         );
     }
