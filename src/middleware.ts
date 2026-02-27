@@ -5,7 +5,7 @@ export function middleware(req: NextRequest) {
     const basicAuth = req.headers.get('authorization')
 
     // .env に設定されたユーザー名とパスワードを取得。未設定の場合はデフォルト値（coyasu / dental）をフォールバックに。
-    const user = process.env.BASIC_AUTH_USER || 'coyasu'
+    const user = process.env.BASIC_AUTH_USER || 'coyass'
     const pwd = process.env.BASIC_AUTH_PASSWORD || 'dental'
 
     const expectedAuth = Buffer.from(`${user}:${pwd}`).toString('base64')

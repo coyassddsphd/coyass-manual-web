@@ -11,7 +11,7 @@ export default async function Home() {
     // Vercel本番環境：GitHubのリポジトリから直接最新のマニュアルを取り寄せる (fsエラー回避)
     try {
       const repoOwner = "coyassddsphd";
-      const repoName = "coyasu-manual-web";
+      const repoName = "coyass-manual-web";
       const filePathInRepo = "manual_blueprint.md";
       const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePathInRepo}`;
 
