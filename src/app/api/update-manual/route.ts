@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
-import fs from "fs";
-import path from "path";
 
 // Vercel Serverless Functionの設定
 // 確実に動的に実行させ、AIの回答待ちのタイムアウト（最大60秒）を許容する
