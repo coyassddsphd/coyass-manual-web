@@ -268,9 +268,18 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                         <ReactMarkdown
                                             remarkPlugins={[remarkGfm]}
                                             components={{
-                                                img: ({ node, ...props }) => (
+                                                img: ({ src, alt }) => (
                                                     <div className="relative group/img-container my-8">
-                                                        <img {...props} className="rounded-2xl shadow-lg w-full object-cover max-h-[400px]" alt={props.alt || "manual image"} />
+                                                        {src && (
+                                                            <div className="relative w-full aspect-video md:aspect-[16/9]">
+                                                                <Image
+                                                                    src={src as string}
+                                                                    alt={alt || "manual image"}
+                                                                    fill
+                                                                    className="rounded-2xl shadow-lg object-cover"
+                                                                />
+                                                            </div>
+                                                        )}
                                                         {!isReadOnly && (
                                                             <button
                                                                 onClick={() => {
@@ -297,7 +306,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                                                     body: JSON.stringify({
                                                                                         imageData: base64,
                                                                                         imagePath: `public/images/manual/${newFileName}`,
-                                                                                        comment: `Replaced ${props.src} with real photo`
+                                                                                        comment: `Replaced ${src} with real photo`
                                                                                     }),
                                                                                 });
 
@@ -310,7 +319,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                                                     headers: { "Content-Type": "application/json" },
                                                                                     body: JSON.stringify({
                                                                                         originalText: sec,
-                                                                                        comment: `画像「${props.src}」を「/images/manual/${newFileName}」に差し替えてください。`,
+                                                                                        comment: `画像「${src}」を「/images/manual/${newFileName}」に差し替えてください。`,
                                                                                         imageData: null
                                                                                     }),
                                                                                 });
@@ -321,7 +330,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                                                 } else {
                                                                                     throw new Error("リンク更新失敗");
                                                                                 }
-                                                                            } catch (err) {
+                                                                            } catch {
                                                                                 setMessage("❌ 差し替えに失敗しました。時間をおいてお試しください。");
                                                                                 setIsLoading(false);
                                                                             }
@@ -465,6 +474,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                             className="hidden"
                                             accept="image/*"
                                             onChange={handleFileChange}
+                                            aria-label="画像を選択"
                                         />
 
                                         {attachedImage ? (
@@ -481,6 +491,8 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                         setAttachedImage(null);
                                                     }}
                                                     className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-lg"
+                                                    aria-label="画像を削除"
+                                                    title="画像を削除"
                                                 >
                                                     <X className="w-4 h-4" />
                                                 </button>
