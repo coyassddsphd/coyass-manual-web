@@ -42,14 +42,16 @@ export async function POST(request: Request) {
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePathInRepo}`;
         const getFileRes = await fetch(apiUrl, {
             headers: {
-                "Authorization": `token ${githubToken}`,
+                "Authorization": `Bearer ${githubToken}`,
                 "Accept": "application/vnd.github.v3+json",
+                "User-Agent": "Coyass-Manual-App"
             },
             cache: 'no-store'
         });
 
         if (!getFileRes.ok) {
             const errBody = await getFileRes.text();
+            console.error("GitHub fetch failed:", { status: getFileRes.status, body: errBody });
             throw new Error(`GitHub接続エラー (${getFileRes.status}): ${errBody}`);
         }
 
@@ -58,7 +60,6 @@ export async function POST(request: Request) {
         const fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
         // --- AIによるマニュアル全体の再構成 ---
-        // 従来の「部分置換」ではなく「全体生成」に切り替えることで、照合エラーを回避
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const systemPrompt = `あなたは歯科医院のマニュアル管理エキスパートです。
@@ -80,27 +81,31 @@ ${comment}
 ${fullMarkdown}
 `;
 
+        console.log("Calling Gemini API...");
         let result;
         if (imageData && imageData.data && imageData.mimeType) {
-            // 画像データがある場合はマルチモーダルで処理
             result = await model.generateContent([
                 systemPrompt + userContext,
                 { inlineData: { data: imageData.data, mimeType: imageData.mimeType } }
             ]);
         } else {
-            // テキスト指示のみの場合
             result = await model.generateContent(systemPrompt + userContext);
         }
 
         const response = await result.response;
         let newFullMarkdown = response.text() || "";
 
-        // 余計な記号を削除
-        newFullMarkdown = newFullMarkdown.replace(/^```markdown\n?/, "").replace(/\n?```$/, "").trim();
+        // AI生成結果のパース強化
+        newFullMarkdown = newFullMarkdown
+            .replace(/^```markdown\n?/, "")
+            .replace(/^```\n?/, "")
+            .replace(/\n?```$/, "")
+            .trim();
 
-        if (!newFullMarkdown || newFullMarkdown.length < fullMarkdown.length * 0.5) {
-            // 生成された内容が極端に短い場合はエラー（AIが全文を返さなかった可能性）
-            throw new Error("AIがマニュアル全文の生成に失敗したか、不完全なデータを返しました。");
+        console.log("AI generation completed. Length change:", { original: fullMarkdown.length, new: newFullMarkdown.length });
+
+        if (!newFullMarkdown || newFullMarkdown.length < fullMarkdown.length * 0.3) {
+            throw new Error("AIが不完全なデータを生成しました。全文が正しく出力されていない可能性があります。");
         }
 
         // --- GitHubへの保存 ---
@@ -109,9 +114,10 @@ ${fullMarkdown}
         const updateRes = await fetch(apiUrl, {
             method: "PUT",
             headers: {
-                "Authorization": `token ${githubToken}`,
+                "Authorization": `Bearer ${githubToken}`,
                 "Accept": "application/vnd.github.v3+json",
                 "Content-Type": "application/json",
+                "User-Agent": "Coyass-Manual-App"
             },
             body: JSON.stringify({
                 message: `Manual update via AI Integration: ${comment.substring(0, 30)}...`,
@@ -123,8 +129,11 @@ ${fullMarkdown}
 
         if (!updateRes.ok) {
             const errText = await updateRes.text();
+            console.error("GitHub update failed:", { status: updateRes.status, body: errText });
             throw new Error(`GitHub保存失敗: ${updateRes.status} ${errText}`);
         }
+
+        console.log("Manual updated successfully on GitHub.");
 
         return NextResponse.json({
             success: true,
@@ -134,9 +143,9 @@ ${fullMarkdown}
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "不明なサーバーエラー";
-        console.error("API Error:", error);
+        console.error("Critical API Error:", error);
         return NextResponse.json(
-            { error: "サーバーエラーが発生しました", details: errorMessage },
+            { error: "処理中にエラーが発生しました", details: errorMessage, success: false },
             { status: 500 }
         );
     }

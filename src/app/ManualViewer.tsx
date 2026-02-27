@@ -100,6 +100,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
 
         setIsLoading(true);
         setMessage("AIがマニュアルと画像を解析中...少々お待ちください🤖");
+        console.log("Starting AI manual update request...", { comment, hasImage: !!attachedImage });
 
         try {
             const res = await fetch("/api/update-manual", {
@@ -115,7 +116,17 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                 }),
             });
 
+            console.log("Response received:", { status: res.status, ok: res.ok });
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error("API error response:", errorText);
+                throw new Error(`サーバーエラー (${res.status}): ${errorText.substring(0, 100)}`);
+            }
+
             const data = await res.json();
+            console.log("Response data:", data);
+
             if (data.success) {
                 setMessage("✅ 更新成功！マニュアルを最新の状態に読み込み直します...");
                 setIsLoading(false);
@@ -123,12 +134,15 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                     window.location.reload();
                 }, 2500);
             } else {
-                setMessage("❌ エラー: " + (data.error || "不明なエラー"));
+                const errorMsg = data.error || data.details || "不明なエラー";
+                console.error("Logic error from API:", errorMsg);
+                setMessage("❌ エラー: " + errorMsg);
                 setIsLoading(false);
             }
         } catch (error) {
-            console.error(error);
-            setMessage("❌ 通信エラーが発生しました");
+            console.error("Catch block error:", error);
+            const msg = error instanceof Error ? error.message : "通信エラーが発生しました";
+            setMessage(`❌ ${msg}`);
             setIsLoading(false);
         }
     };
