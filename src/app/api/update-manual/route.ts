@@ -26,8 +26,12 @@ export async function POST(request: Request) {
         // マニュアルのパス
         const filePath = path.join(process.cwd(), "manual_blueprint.md");
         if (!fs.existsSync(filePath)) {
+            // パスが見つからない場合は、どこを探したかの詳細も返す
             return NextResponse.json(
-                { error: "マニュアルファイルが見つかりません" },
+                {
+                    error: "マニュアルファイル(manual_blueprint.md)が見つかりません",
+                    details: `探したパス: ${filePath} \n現在のディレクトリ: ${process.cwd()}`
+                },
                 { status: 404 }
             );
         }
@@ -139,11 +143,27 @@ ${comment}`;
             updatedText: updatedText,
             message: "マニュアルが自動更新され、クラウドに保存されました！反映まで1〜2分お待ちください。",
         });
-    } catch (error: unknown) {
-        console.error("API Error:", error);
-        const errorMessage = error instanceof Error ? error.message : "不明なエラー";
+    } catch (error: any) {
+        console.error("=== API CRITICAL ERROR ===", error);
+
+        // Errorオブジェクトの全てを出力して原因を探る
+        let errorMessage = "不明なエラー";
+        let errorStack = "";
+
+        if (error instanceof Error) {
+            errorMessage = error.message;
+            errorStack = error.stack || "";
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        } else {
+            errorMessage = JSON.stringify(error);
+        }
+
         return NextResponse.json(
-            { error: "サーバーエラーが発生しました", details: errorMessage },
+            {
+                error: "サーバーエラーが発生しました",
+                details: `${errorMessage}\n${errorStack}`.substring(0, 500)
+            },
             { status: 500 }
         );
     }
