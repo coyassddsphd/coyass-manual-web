@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
 // Vercel Serverless Functionの設定
-// 確実に動的に実行させ、AIの回答待ちのタイムアウト（最大60秒）を許容する
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
@@ -17,7 +16,8 @@ export async function POST(request: Request) {
         }
 
         const ai = new GoogleGenAI({ apiKey });
-        const { originalText, comment } = await request.json();
+        // imageData: { data: string (base64), mimeType: string }
+        const { originalText, comment, imageData } = await request.json();
 
         if (!originalText || !comment) {
             return NextResponse.json(
@@ -26,9 +26,9 @@ export async function POST(request: Request) {
             );
         }
 
-        // --- 1. マニュアルの現在のテキストを取得 ---
+        // --- GitHubからの原本取得 ---
         let fullMarkdown = "";
-        let fileSha = ""; // 後でGitHubコミット用に使う
+        let fileSha = "";
         const githubToken = process.env.GITHUB_TOKEN;
         const repoOwner = "coyassddsphd";
         const repoName = "coyasu-manual-web";
@@ -36,61 +36,78 @@ export async function POST(request: Request) {
 
         if (!githubToken) {
             return NextResponse.json(
-                { error: "システム設定エラー：GITHUB_TOKENが見つかりません。VercelのEnvironment Variablesを確認してください。" },
+                { error: "GITHUB_TOKENが見つかりません。" },
                 { status: 500 }
             );
         }
 
-        // 常にGitHub API経由で直接ファイルを取得する (VercelのEROFS制限を完全回避)
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePathInRepo}`;
         const getFileRes = await fetch(apiUrl, {
             headers: {
                 "Authorization": `token ${githubToken}`,
                 "Accept": "application/vnd.github.v3+json",
             },
-            cache: 'no-store' // 常に最新を取得
+            cache: 'no-store'
         });
 
         if (!getFileRes.ok) {
-            console.error("GitHubからのファイル情報取得に失敗:", await getFileRes.text());
             return NextResponse.json(
-                { error: "通信エラー：GitHubからのマニュアル原本の取得に失敗しました。" },
+                { error: "GitHubからの原本取得に失敗しました。" },
                 { status: 500 }
             );
         }
 
         const fileData = await getFileRes.json();
         fileSha = fileData.sha;
-        // GitHubのcontentはBase64エンコードされているのでデコードする
         fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
-        // 指定されたテキストが存在するか確認
         if (!fullMarkdown.includes(originalText)) {
             return NextResponse.json(
-                { error: "指定された元の文章が見つかりません。別の人が既に編集したか、画面が古くなっています。リロードしてください。" },
+                { error: "指定された元の文章が見つかりません。リロードして最新の状態を確認してください。" },
                 { status: 400 }
             );
         }
 
-        // Gemini APIでAIアシスタントに修正を依頼
-        const prompt = `あなたは歯科医院のマニュアルを編集する優秀なAIアシスタントです。
-以下の【元のマニュアルの該当部分】に対して、【スタッフのコメント（要望）】の内容を反映させて、適切に書き直した新しいテキストだけを出力してください。
-Markdownの書式や箇条書きの階層構造は崩さずに維持してください。
-解説や「わかりました」などの挨拶、さらにマークダウンのコードブロック行（\`\`\`markdown など）は一切不要です。変更後のテキストそのものだけを直接出力してください。
+        // --- AIによるマルチモーダル解析とテキスト生成 ---
+        const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-【元のマニュアルの該当部分】
+        const prompt = `あなたは歯科医院のマニュアルを編集する優秀なAIアシスタントです。
+以下の指示に従って、マニュアルを更新してください。
+
+【指示】
+1. スタッフの【要望コメント】を最優先に反映してください。
+2. もし【画像データ】が提供されている場合、その画像内の文字情報、書類の内容、グラフ、表などを読み取り、マニュアルにふさわしい形式（文字やMarkdownの表など）に変換して組み込んでください。
+3. 【元のマニュアル部分】をベースに、上記の内容を統合して、新しく書き直したテキストだけを出力してください。
+
+【制約】
+- Markdownの書式を維持してください。
+- 解説、挨拶、コードブロック( \`\`\` )などは一切出力しないでください。変更後のテキストそのものだけを出力してください。
+
+【元のマニュアル部分】
 ${originalText}
 
-【スタッフのコメント（要望）】
+【スタッフの要望コメント】
 ${comment}`;
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-        });
+        let result;
+        if (imageData && imageData.data && imageData.mimeType) {
+            // 画像がある場合のマルチモーダルプロンプト
+            result = await model.generateContent([
+                prompt,
+                {
+                    inlineData: {
+                        data: imageData.data,
+                        mimeType: imageData.mimeType
+                    }
+                }
+            ]);
+        } else {
+            // テキストのみの場合
+            result = await model.generateContent(prompt);
+        }
 
-        let updatedText = response.text || "";
-        // 余分なマークダウン装飾を剥がす
+        const response = await result.response;
+        let updatedText = response.text() || "";
         updatedText = updatedText.replace(/^```markdown\n?/, "").replace(/\n?```$/, "");
 
         if (!updatedText) {
@@ -100,10 +117,8 @@ ${comment}`;
             );
         }
 
-        // 元のファイルの該当部分を置換
+        // --- GitHubへの保存 ---
         const newFullMarkdown = fullMarkdown.replace(originalText, updatedText);
-
-        // 新しい内容をBase64にエンコードして上書きコミット（PUT）する
         const encodedContent = Buffer.from(newFullMarkdown, 'utf-8').toString('base64');
 
         const updateRes = await fetch(apiUrl, {
@@ -114,7 +129,7 @@ ${comment}`;
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                message: `Update manual via AI by staff comment: ${comment.substring(0, 30)}...`,
+                message: `Update via AI Vision by staff: ${comment.substring(0, 30)}...`,
                 content: encodedContent,
                 sha: fileSha,
                 branch: "main"
@@ -122,38 +137,18 @@ ${comment}`;
         });
 
         if (!updateRes.ok) {
-            console.error("GitHubへのコミットに失敗:", await updateRes.text());
-            throw new Error("GitHubへのコミット（保存）に失敗しました");
+            throw new Error("GitHubへのコミットに失敗しました");
         }
-
-        console.log("GitHub API経由での保存完了（完全クラウド実行）");
 
         return NextResponse.json({
             success: true,
             updatedText: updatedText,
-            message: "マニュアルが自動更新され、クラウドに保存されました！反映まで1〜2分お待ちください。",
+            message: "画像解析とマニュアル更新が成功し、保存されました！",
         });
     } catch (error: any) {
-        console.error("=== API CRITICAL ERROR ===", error);
-
-        // Errorオブジェクトの全てを出力して原因を探る
-        let errorMessage = "不明なエラー";
-        let errorStack = "";
-
-        if (error instanceof Error) {
-            errorMessage = error.message;
-            errorStack = error.stack || "";
-        } else if (typeof error === 'string') {
-            errorMessage = error;
-        } else {
-            errorMessage = JSON.stringify(error);
-        }
-
+        console.error("API Error:", error);
         return NextResponse.json(
-            {
-                error: "サーバーエラーが発生しました",
-                details: `${errorMessage}\n${errorStack}`.substring(0, 500)
-            },
+            { error: "サーバーエラーが発生しました", details: error.message },
             { status: 500 }
         );
     }

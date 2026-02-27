@@ -8,14 +8,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Menu,
     X,
-    ChevronRight,
     Edit3,
     CheckCircle2,
     AlertCircle,
     Search,
     BookOpen,
     ArrowRight,
-    MessageSquare
+    MessageSquare,
+    Image as ImageIcon,
+    Camera
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -28,15 +29,24 @@ interface ManualViewerProps {
     initialMarkdown: string;
 }
 
+interface ImageData {
+    data: string;
+    mimeType: string;
+    previewUrl: string;
+}
+
 export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
     const [markdown] = useState(initialMarkdown);
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
     const [comment, setComment] = useState("");
+    const [attachedImage, setAttachedImage] = useState<ImageData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [activeSection, setActiveSection] = useState<number>(0);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // セクション分割
     const sections = markdown.split(/(?=\n## )/).filter((sec) => sec.trim() !== "");
@@ -69,11 +79,27 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
         return () => observer.disconnect();
     }, [sections]);
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64String = reader.result as string;
+            setAttachedImage({
+                data: base64String.split(",")[1],
+                mimeType: file.type,
+                previewUrl: base64String
+            });
+        };
+        reader.readAsDataURL(file);
+    };
+
     const handleSubmit = async () => {
         if (!selectedSection || !comment.trim()) return;
 
         setIsLoading(true);
-        setMessage("AIがマニュアル本文を書き換え中...少々お待ちください🤖");
+        setMessage("AIがマニュアルと画像を解析中...少々お待ちください🤖");
 
         try {
             const res = await fetch("/api/update-manual", {
@@ -82,17 +108,21 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                 body: JSON.stringify({
                     originalText: selectedSection,
                     comment: comment,
+                    imageData: attachedImage ? {
+                        data: attachedImage.data,
+                        mimeType: attachedImage.mimeType
+                    } : null
                 }),
             });
 
             const data = await res.json();
             if (data.success) {
-                setMessage("✅ 更新成功！ページをリロードして最新版を反映します...");
+                setMessage("✅ 更新成功！ページをリロードして反映します...");
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
             } else {
-                setMessage("❌ エラー: " + (data.error || "不明なエラー") + (data.details ? `\n(${data.details})` : ""));
+                setMessage("❌ エラー: " + (data.error || "不明なエラー"));
                 setIsLoading(false);
             }
         } catch (error) {
@@ -123,6 +153,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                 <button
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                     className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                    aria-label={isSidebarOpen ? "メニューを閉じる" : "メニューを開く"}
                 >
                     {isSidebarOpen ? <X /> : <Menu />}
                 </button>
@@ -133,7 +164,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                 "fixed inset-y-0 left-0 z-50 w-[var(--sidebar-w)] bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto",
                 isSidebarOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="sticky top-0 h-screen flex flex-column py-8 overflow-y-auto px-4 scrollbar-hide">
+                <div className="sticky top-0 h-screen flex flex-col py-8 overflow-y-auto px-4 scrollbar-hide">
                     <div className="flex items-center gap-4 mb-10 px-4">
                         <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
                             <BookOpen className="w-6 h-6 text-white" />
@@ -169,6 +200,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                         ? "bg-blue-50 text-blue-700 shadow-sm shadow-blue-100/50"
                                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                                 )}
+                                aria-current={activeSection === idx ? "page" : undefined}
                             >
                                 <span className={cn(
                                     "w-1.5 h-1.5 rounded-full",
@@ -200,7 +232,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
                                 </span>
-                                AI-Powered Update Enabled
+                                AI Vision & OCR Enabled
                             </div>
                             <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-6">
                                 スタッフ専用<br className="sm:hidden" />
@@ -243,6 +275,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                     setSelectedSection(sec);
                                                     setComment("");
                                                     setMessage("");
+                                                    setAttachedImage(null);
                                                 }}
                                                 className="group relative inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white text-sm font-bold rounded-2xl hover:bg-blue-600 transition-all hover:shadow-xl hover:shadow-blue-200"
                                             >
@@ -265,7 +298,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                     </div>
 
                     <footer className="mt-24 pt-12 border-t border-slate-100 text-center">
-                        <div className="flex justify-center items-center gap-6 mb-8 mb-8 opacity-20 hover:opacity-100 transition-opacity duration-700">
+                        <div className="flex justify-center items-center gap-6 mb-8 opacity-20 hover:opacity-100 transition-opacity duration-700">
                             <Image src="/logos/nameco.png" alt="nameco" width={48} height={48} />
                             <Image src="/logos/migakuma.png" alt="migakuma" width={42} height={42} />
                         </div>
@@ -307,6 +340,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                     onClick={() => setSelectedSection(null)}
                                     className="p-2 hover:bg-slate-200 rounded-full transition-colors"
                                     disabled={isLoading}
+                                    aria-label="閉じる"
                                 >
                                     <X className="w-6 h-6 text-slate-400" />
                                 </button>
@@ -317,23 +351,83 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                     <label className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
                                         Target Context
                                     </label>
-                                    <div className="bg-slate-50 p-6 rounded-[1.5rem] text-sm text-slate-500 italic border border-slate-100 max-h-40 overflow-y-auto leading-relaxed">
+                                    <div className="bg-slate-50 p-6 rounded-[1.5rem] text-sm text-slate-500 italic border border-slate-100 max-h-32 overflow-y-auto leading-relaxed">
                                         {selectedSection}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-3">
+                                    <label className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-3" htmlFor="instructions">
                                         Change Instructions (話し言葉でOK)
                                     </label>
                                     <textarea
+                                        id="instructions"
                                         className="w-full p-6 bg-white border-2 border-slate-100 rounded-[1.5rem] focus:outline-none focus:border-blue-600 transition-all resize-none text-slate-800 text-lg leading-relaxed placeholder:text-slate-300 shadow-sm"
-                                        rows={4}
-                                        placeholder="例：初診時の持ち物に『マイナンバーカード』を追加して、一番目立つように書いて！"
+                                        rows={3}
+                                        placeholder="例：写真のグラフをマニュアルに追加して！"
                                         value={comment}
                                         onChange={(e) => setComment(e.target.value)}
                                         disabled={isLoading}
                                     />
+                                </div>
+
+                                {/* 画像添付セクション */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-3">
+                                        Photo / Documents (任意)
+                                    </label>
+                                    <div
+                                        onClick={() => !isLoading && fileInputRef.current?.click()}
+                                        className={cn(
+                                            "relative border-2 border-dashed rounded-[1.5rem] p-6 transition-all cursor-pointer flex flex-col items-center justify-center gap-3",
+                                            attachedImage ? "border-blue-200 bg-blue-50/30" : "border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-white"
+                                        )}
+                                    >
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleFileChange}
+                                        />
+
+                                        {attachedImage ? (
+                                            <div className="relative w-full h-32">
+                                                <Image
+                                                    src={attachedImage.previewUrl}
+                                                    alt="Preview"
+                                                    fill
+                                                    className="object-contain rounded-xl"
+                                                />
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setAttachedImage(null);
+                                                    }}
+                                                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-lg"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="flex gap-4">
+                                                    <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100">
+                                                        <Camera className="w-6 h-6 text-slate-400" />
+                                                    </div>
+                                                    <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100">
+                                                        <ImageIcon className="w-6 h-6 text-slate-400" />
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm font-bold text-slate-500">
+                                                    タップして写真撮影 or 書類を選択
+                                                </p>
+                                                <p className="text-[10px] text-slate-400 uppercase tracking-widest">
+                                                    書類やグラフをAIが瞬時に文字化します
+                                                </p>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {message && (
@@ -362,7 +456,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                 <button
                                     onClick={handleSubmit}
                                     disabled={isLoading || !comment.trim()}
-                                    className="relative overflow-hidden px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed group transition-all"
+                                    className="relative overflow-hidden px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed group transition-all shadow-lg shadow-blue-100"
                                 >
                                     {isLoading ? (
                                         <div className="flex items-center gap-3">
@@ -370,7 +464,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
                                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
-                                            AI思考中...
+                                            AIが解析中...
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-2">
