@@ -60,7 +60,7 @@ export async function POST(request: Request) {
         const fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
         // --- AIによる特定セクションの修正 ---
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-001" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const systemPrompt = `あなたは歯科医院のマニュアル編集者です。
 与えられた「修正前の文章」を、ユーザーの「要望コメント」および「画像（もしあれば）」に基づいて修正・改善してください。
