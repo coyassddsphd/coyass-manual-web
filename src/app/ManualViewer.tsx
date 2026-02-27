@@ -235,8 +235,8 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                 AI Vision & OCR Enabled
                             </div>
                             <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-6">
-                                スタッフ専用<br className="sm:hidden" />
-                                <span className="text-blue-600">自動更新マニュアル</span>
+                                スタッフ専用<span className="text-blue-600">（お引越し完了版）</span><br className="sm:hidden" />
+                                自動更新マニュアル
                             </h1>
                             <p className="text-lg text-slate-500 max-w-2xl leading-relaxed">
                                 現場の気づきをAIが形にする。最新のプロトコルを常に手元に。
