@@ -139,11 +139,8 @@ ${comment}`;
                 throw new Error("GitHubへのコミット（保存）に失敗しました");
             }
 
-            // ローカルでも一応保存を試みる（Vercelではエラーになるので無視する）
-            try {
-                const filePath = path.join(process.cwd(), "manual_blueprint.md");
-                fs.writeFileSync(filePath, newFullMarkdown, "utf-8");
-            } catch (e) { }
+            // 注意: Vercel本番環境でのfs.writeFileSyncはEROFSエラーになるため一切書き込みを行わない
+            console.log("GitHub API経由での保存完了（ローカルファイルは書き換えません）");
 
         } else {
             // GITHUB_TOKENがない場合は従来のローカルファイル保存のみ（ローカル開発環境用）
