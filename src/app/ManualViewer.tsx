@@ -45,6 +45,11 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
     const [activeSection, setActiveSection] = useState<number>(0);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -237,7 +242,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                         >
                             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold mb-4">
                                 <CheckCircle2 className="w-3 h-3" />
-                                最終更新: {new Date().toLocaleDateString('ja-JP')}
+                                最終更新: {isMounted ? new Date().toLocaleDateString('ja-JP') : "読み込み中..."}
                             </div>
                             <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-4 leading-tight">
                                 スタッフマニュアル <span className="text-blue-600">v2.0</span>
@@ -377,7 +382,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                             <Image src="/logos/migakuma.png" alt="migakuma" width={42} height={42} />
                         </div>
                         <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">
-                            &copy; {new Date().getFullYear()} Nakameguro Coyasu Dental Clinic. Powered by Gemini AI.
+                            &copy; {isMounted ? new Date().getFullYear() : ""} Nakameguro Coyasu Dental Clinic. Powered by Gemini AI.
                         </p>
                     </footer>
                 </div>
