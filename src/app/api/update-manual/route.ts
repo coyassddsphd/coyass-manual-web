@@ -3,6 +3,11 @@ import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
 import path from "path";
 
+// Vercel Serverless Functionの設定
+// 確実に動的に実行させ、AIの回答待ちのタイムアウト（最大60秒）を許容する
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
     try {
         const apiKey = process.env.GEMINI_API_KEY;
