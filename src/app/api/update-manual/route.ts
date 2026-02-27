@@ -60,7 +60,8 @@ export async function POST(request: Request) {
         const fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
         // --- AIによる特定セクションの修正 ---
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // 調査により、現在は models/gemini-2.5-flash が有効であることを確認
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const systemPrompt = `あなたは歯科医院のマニュアル編集者です。
 与えられた「修正前の文章」を、ユーザーの「要望コメント」および「画像（もしあれば）」に基づいて修正・改善してください。
@@ -78,16 +79,33 @@ ${originalText}
 ${comment}
 `;
 
-        console.log("Calling Gemini API (Section Update)...");
-        let result;
-        if (imageData && imageData.data && imageData.mimeType) {
-            result = await model.generateContent([
-                systemPrompt + userContext,
-                { inlineData: { data: imageData.data, mimeType: imageData.mimeType } }
-            ]);
-        } else {
-            result = await model.generateContent(systemPrompt + userContext);
-        }
+        console.log("Calling Gemini API (Section Update - Gemini 2.5 Flash)...");
+
+        // クォータ超過 (429) 時のリトライ用関数
+        const callAIWithRetry = async (maxRetries = 2) => {
+            for (let i = 0; i <= maxRetries; i++) {
+                try {
+                    if (imageData && imageData.data && imageData.mimeType) {
+                        return await model.generateContent([
+                            systemPrompt + userContext,
+                            { inlineData: { data: imageData.data, mimeType: imageData.mimeType } }
+                        ]);
+                    } else {
+                        return await model.generateContent(systemPrompt + userContext);
+                    }
+                } catch (err: any) {
+                    if (err.message?.includes("429") && i < maxRetries) {
+                        console.log(`Quota exceeded. Retrying in 10s... (Attempt ${i + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, 10000));
+                        continue;
+                    }
+                    throw err;
+                }
+            }
+            throw new Error("Retry limit reached");
+        };
+
+        const result = await callAIWithRetry();
 
         const response = await result.response;
         let updatedSectionText = response.text() || "";
@@ -154,8 +172,16 @@ ${comment}
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "不明なサーバーエラー";
         console.error("Critical API Error:", error);
+
+        let details = errorMessage;
+        if (errorMessage.includes("429")) {
+            details = "現在AIの利用制限がかかっています。1分ほど待ってから再度お試しいただくか、Google AI Studioで有料プランへの切り替えをご検討ください。";
+        } else if (errorMessage.includes("404")) {
+            details = "AIモデルのメンテナンス中です。システム管理者にモデル設定の更新を依頼してください。";
+        }
+
         return NextResponse.json(
-            { error: "処理中にエラーが発生しました", details: errorMessage, success: false },
+            { error: "処理中にエラーが発生しました", details: details, success: false },
             { status: 500 }
         );
     }
