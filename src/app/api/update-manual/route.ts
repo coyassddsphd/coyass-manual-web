@@ -16,7 +16,7 @@ export async function POST(request: Request) {
         }
 
         // SDKの初期化
-        const genAI = new GoogleGenAI(apiKey);
+        const genAI = new GoogleGenAI({ apiKey }) as any;
         const { originalText, comment, imageData } = await request.json();
 
         if (!originalText || !comment) {
