@@ -36,48 +36,40 @@ export async function POST(request: Request) {
         const repoName = "coyasu-manual";
         const filePathInRepo = "manual_blueprint.md";
 
-        if (githubToken) {
-            // Vercel本番環境：GitHub API経由で直接ファイルを取得する (EROFSエラー回避)
-            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePathInRepo}`;
-            const getFileRes = await fetch(apiUrl, {
-                headers: {
-                    "Authorization": `token ${githubToken}`,
-                    "Accept": "application/vnd.github.v3+json",
-                }
-            });
-
-            if (!getFileRes.ok) {
-                console.error("GitHubからのファイル情報取得に失敗:", await getFileRes.text());
-                return NextResponse.json(
-                    { error: "Vercel環境：GitHubからのマニュアルファイル取得に失敗しました。" },
-                    { status: 500 }
-                );
-            }
-
-            const fileData = await getFileRes.json();
-            fileSha = fileData.sha;
-            // GitHubのcontentはBase64エンコードされているのでデコードする
-            fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
-
-        } else {
-            // ローカル開発環境：fsを使って直接読み込む
-            const filePath = path.join(process.cwd(), "manual_blueprint.md");
-            if (!fs.existsSync(filePath)) {
-                return NextResponse.json(
-                    {
-                        error: "マニュアルファイル(manual_blueprint.md)が見つかりません",
-                        details: `探したパス: ${filePath} \n現在のディレクトリ: ${process.cwd()}`
-                    },
-                    { status: 404 }
-                );
-            }
-            fullMarkdown = fs.readFileSync(filePath, "utf-8");
+        if (!githubToken) {
+            return NextResponse.json(
+                { error: "システム設定エラー：GITHUB_TOKENが見つかりません。VercelのEnvironment Variablesを確認してください。" },
+                { status: 500 }
+            );
         }
+
+        // 常にGitHub API経由で直接ファイルを取得する (VercelのEROFS制限を完全回避)
+        const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePathInRepo}`;
+        const getFileRes = await fetch(apiUrl, {
+            headers: {
+                "Authorization": `token ${githubToken}`,
+                "Accept": "application/vnd.github.v3+json",
+            },
+            cache: 'no-store' // 常に最新を取得
+        });
+
+        if (!getFileRes.ok) {
+            console.error("GitHubからのファイル情報取得に失敗:", await getFileRes.text());
+            return NextResponse.json(
+                { error: "通信エラー：GitHubからのマニュアル原本の取得に失敗しました。" },
+                { status: 500 }
+            );
+        }
+
+        const fileData = await getFileRes.json();
+        fileSha = fileData.sha;
+        // GitHubのcontentはBase64エンコードされているのでデコードする
+        fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
         // 指定されたテキストが存在するか確認
         if (!fullMarkdown.includes(originalText)) {
             return NextResponse.json(
-                { error: "指定されたテキストが元のファイルに見つかりません。最新版に更新してからやり直してください。" },
+                { error: "指定された元の文章が見つかりません。別の人が既に編集したか、画面が古くなっています。リロードしてください。" },
                 { status: 400 }
             );
         }
@@ -113,40 +105,30 @@ ${comment}`;
         // 元のファイルの該当部分を置換
         const newFullMarkdown = fullMarkdown.replace(originalText, updatedText);
 
-        // Vercelなどの本番環境ではファイルシステムが読み取り専用のため、GitHub API経由で保存する
-        if (githubToken) {
-            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePathInRepo}`;
-            // 新しい内容をBase64にエンコードして上書きコミット（PUT）する
-            const encodedContent = Buffer.from(newFullMarkdown, 'utf-8').toString('base64');
+        // 新しい内容をBase64にエンコードして上書きコミット（PUT）する
+        const encodedContent = Buffer.from(newFullMarkdown, 'utf-8').toString('base64');
 
-            const updateRes = await fetch(apiUrl, {
-                method: "PUT",
-                headers: {
-                    "Authorization": `token ${githubToken}`,
-                    "Accept": "application/vnd.github.v3+json",
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    message: `Update manual via AI by staff comment: ${comment.substring(0, 30)}...`,
-                    content: encodedContent,
-                    sha: fileSha,
-                    branch: "main"
-                })
-            });
+        const updateRes = await fetch(apiUrl, {
+            method: "PUT",
+            headers: {
+                "Authorization": `token ${githubToken}`,
+                "Accept": "application/vnd.github.v3+json",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                message: `Update manual via AI by staff comment: ${comment.substring(0, 30)}...`,
+                content: encodedContent,
+                sha: fileSha,
+                branch: "main"
+            })
+        });
 
-            if (!updateRes.ok) {
-                console.error("GitHubへのコミットに失敗:", await updateRes.text());
-                throw new Error("GitHubへのコミット（保存）に失敗しました");
-            }
-
-            // 注意: Vercel本番環境でのfs.writeFileSyncはEROFSエラーになるため一切書き込みを行わない
-            console.log("GitHub API経由での保存完了（ローカルファイルは書き換えません）");
-
-        } else {
-            // GITHUB_TOKENがない場合は従来のローカルファイル保存のみ（ローカル開発環境用）
-            const filePath = path.join(process.cwd(), "manual_blueprint.md");
-            fs.writeFileSync(filePath, newFullMarkdown, "utf-8");
+        if (!updateRes.ok) {
+            console.error("GitHubへのコミットに失敗:", await updateRes.text());
+            throw new Error("GitHubへのコミット（保存）に失敗しました");
         }
+
+        console.log("GitHub API経由での保存完了（完全クラウド実行）");
 
         return NextResponse.json({
             success: true,
