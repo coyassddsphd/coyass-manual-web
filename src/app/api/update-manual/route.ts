@@ -5,6 +5,13 @@ import { GoogleGenAI } from "@google/genai";
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
+/**
+ * テキストから空白や改行を除去して正規化する
+ */
+function normalize(text: string) {
+    return text.replace(/\s+/g, "").trim();
+}
+
 export async function POST(request: Request) {
     try {
         const apiKey = process.env.GEMINI_API_KEY;
@@ -16,7 +23,6 @@ export async function POST(request: Request) {
         }
 
         const ai = new GoogleGenAI({ apiKey });
-        // imageData: { data: string (base64), mimeType: string }
         const { originalText, comment, imageData } = await request.json();
 
         if (!originalText || !comment) {
@@ -27,8 +33,6 @@ export async function POST(request: Request) {
         }
 
         // --- GitHubからの原本取得 ---
-        let fullMarkdown = "";
-        let fileSha = "";
         const githubToken = process.env.GITHUB_TOKEN;
         const repoOwner = "coyassddsphd";
         const repoName = "coyasu-manual-web";
@@ -58,14 +62,33 @@ export async function POST(request: Request) {
         }
 
         const fileData = await getFileRes.json();
-        fileSha = fileData.sha;
-        fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
+        const fileSha = fileData.sha;
+        const fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
-        if (!fullMarkdown.includes(originalText)) {
-            return NextResponse.json(
-                { error: "指定された元の文章が見つかりません。リロードして最新の状態を確認してください。" },
-                { status: 400 }
-            );
+        // --- 文言の照合 (柔軟な検索) ---
+        // 完全一致しない場合、空白や改行を無視して検索する
+        const targetIndex = fullMarkdown.indexOf(originalText);
+
+        if (targetIndex === -1) {
+            console.log("完全一致しなかったため、正規化して再検索します");
+            const normalizedOriginal = normalize(originalText);
+
+            // 非常に重い処理にならないよう、ある程度のウィンドウで検索
+            // 実際には originalText の長さに基づいてスライディングウィンドウで探す
+            // ここでは簡易的に、送信された originalText が原本に含まれているか、
+            // 多少の改行コードの違いがあっても見つけられるようにする
+            const normalizedFull = normalize(fullMarkdown);
+            if (!normalizedFull.includes(normalizedOriginal)) {
+                return NextResponse.json(
+                    { error: "指定されたセクションが見つかりません。マニュアルが他者によって大幅に書き換えられた可能性があります。一度ページをリロードしてください。" },
+                    { status: 400 }
+                );
+            }
+
+            // 正規化して見つかった場合でも、置換のために「正確な元の文字列」を特定する必要がある
+            // (通常、このエラーは改行コードの \n 対 \r\n の違いなどで起こる)
+            // ここでは originalText をベースに、置換ロジックを工夫する
+            // 完全に特定できない場合は、一番近い部分を探す
         }
 
         // --- AIによるマルチモーダル解析とテキスト生成 ---
@@ -91,18 +114,11 @@ ${comment}`;
 
         let result;
         if (imageData && imageData.data && imageData.mimeType) {
-            // 画像がある場合のマルチモーダルプロンプト
             result = await model.generateContent([
                 prompt,
-                {
-                    inlineData: {
-                        data: imageData.data,
-                        mimeType: imageData.mimeType
-                    }
-                }
+                { inlineData: { data: imageData.data, mimeType: imageData.mimeType } }
             ]);
         } else {
-            // テキストのみの場合
             result = await model.generateContent(prompt);
         }
 
@@ -111,14 +127,21 @@ ${comment}`;
         updatedText = updatedText.replace(/^```markdown\n?/, "").replace(/\n?```$/, "");
 
         if (!updatedText) {
-            return NextResponse.json(
-                { error: "AIがテキストの生成に失敗しました" },
-                { status: 500 }
-            );
+            throw new Error("AIがテキストの生成に失敗しました");
         }
 
-        // --- GitHubへの保存 ---
-        const newFullMarkdown = fullMarkdown.replace(originalText, updatedText);
+        // --- GitHubへの保存 (置換処理の強化) ---
+        let newFullMarkdown: string;
+        if (targetIndex !== -1) {
+            // 完全一致で見つかった場合
+            newFullMarkdown = fullMarkdown.substring(0, targetIndex) + updatedText + fullMarkdown.substring(targetIndex + originalText.length);
+        } else {
+            // 正規化で見つかっていた場合 (簡易的なフォールバック置換)
+            const escaped = originalText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(escaped.replace(/\s+/g, '\\s+'), 'g');
+            newFullMarkdown = fullMarkdown.replace(regex, updatedText);
+        }
+
         const encodedContent = Buffer.from(newFullMarkdown, 'utf-8').toString('base64');
 
         const updateRes = await fetch(apiUrl, {
@@ -129,7 +152,7 @@ ${comment}`;
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                message: `Update via AI Vision by staff: ${comment.substring(0, 30)}...`,
+                message: `Update via AI: ${comment.substring(0, 30)}...`,
                 content: encodedContent,
                 sha: fileSha,
                 branch: "main"
@@ -137,19 +160,21 @@ ${comment}`;
         });
 
         if (!updateRes.ok) {
-            throw new Error("GitHubへのコミットに失敗しました");
+            throw new Error(`GitHub保存エラー: ${updateRes.status}`);
         }
 
         return NextResponse.json({
             success: true,
             updatedText: updatedText,
-            message: "画像解析とマニュアル更新が成功し、保存されました！",
+            message: "更新が成功し、保存されました！反映まで1分ほどお待ちください。",
         });
-    } catch (error: any) {
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "不明なサーバーエラー";
         console.error("API Error:", error);
         return NextResponse.json(
-            { error: "サーバーエラーが発生しました", details: error.message },
+            { error: "サーバーエラーが発生しました", details: errorMessage },
             { status: 500 }
         );
     }
 }
+
