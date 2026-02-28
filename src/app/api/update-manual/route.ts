@@ -47,9 +47,10 @@ export async function POST(request: Request) {
         if (imageData && imageData.data && imageData.mimeType) {
             console.log("Image data detected. Uploading to GitHub...");
             const timestamp = Date.now();
-            const extension = imageData.mimeType.split('/')[1] || 'png';
+            const extension = imageData.mimeType.split('/')[1] || 'jpg';
             const fileName = `uploaded_${timestamp}.${extension}`;
-            const imagePathInRepo = `public/images/${fileName}`;
+            // GitHubリポジトリのimagesディレクトリに保存
+            const imagePathInRepo = `images/${fileName}`;
             const imageApiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePathInRepo}`;
 
             const uploadImageRes = await fetch(imageApiUrl, {
@@ -68,7 +69,8 @@ export async function POST(request: Request) {
             });
 
             if (uploadImageRes.ok) {
-                newImagePath = `/api/proxy-image?url=${imagePathInRepo}`;
+                // proxy-image APIを通してGitHubから画像を取得するURLを生成
+                newImagePath = `/api/proxy-image?path=${imagePathInRepo}`;
                 console.log(`Image uploaded and proxied: ${newImagePath}`);
             } else {
                 const errText = await uploadImageRes.text();
@@ -102,8 +104,8 @@ export async function POST(request: Request) {
 与えられた「マニュアル全文」の中から、指定された「修正対象セクション」を特定し、スタッフの「要望コメント」に基づいて内容を更新してください。
 
 【画像処理に関する重要ルール】
-${newImagePath ? `- **新しい画像がアップロードされました**: 現在のセクション内にある画像タグ（![...]）のパスを、必ず \`${newImagePath}\` に書き換えてください。もし画像タグがない場合は。適切な場所に \`![イメージ](${newImagePath})\` を新設してください。` : "- 画像のパスは既存のものを維持してください。"}
-- 画像パスは必ず \`/images/xxxxx.png\` のようなWeb相対パス形式に統一してください。 \`file:///...\` のようなパスは絶対に使用しないでください。
+${newImagePath ? `- **新しい画像がアップロードされました**: 現在のセクション内にある画像タグ（![...]）のパスを、必ず \`${newImagePath}\` に書き換えてください。もし画像タグがない場合は、適切な場所に \`![イメージ](${newImagePath})\` を新設してください。` : "- 画像のパスは既存のものを**絶対に変更しないでください**。"}
+- 画像パスは必ず \`/api/proxy-image?path=images/xxxxx.jpg\` の形式を維持してください。 \`/images/xxxxx.png\` や \`file:///...\` のようなパスを絶対に使用しないでください。既存の \`/api/proxy-image?path=...\` 形式のパスはそのまま保持してください。
 
 【編集モードの自動切り替え】
 - **個別項目修正モード**: 渡されたテキストが単一のセクション（例: H3のみ）の場合、その内容を忠実に更新してください。

@@ -1,6 +1,6 @@
 # 中目黒コヤス歯科 スタッフ用マニュアル 設計図（全体構成案）
 
-![中目黒コヤス歯科の新しいロゴマーク（歯ブラシ、歯磨き粉、ユニコーン、二つの輪、ハート、歯、笑顔マークを配した紋章。設立2018年。）](/api/proxy-image?url=https://dr-coyass.com/_src/7724/top_logo.png)
+![中目黒コヤス歯科の新しいロゴマーク（歯ブラシ、歯磨き粉、ユニコーン、二つの輪、ハート、歯、笑顔マークを配した紋章。設立2018年。）](https://dr-coyass.com/_src/7724/top_logo.png)
 
 ## 序章：医院理念・基本方針（全スタッフ共通）
 
@@ -65,22 +65,19 @@
 * **【使用ボンディング材の特性と取り扱い（臨床データ）】**
   * 当院では、症例や治療部位、接着メカニズムに応じて以下のボンディング材を使い分けています。
   * **1. クラレ ユニバーサルボンドクイックER**: 短時間で強力な接着力を発揮するセルフエッチングボンド。操作時間を短縮し、効率的な接着処置を可能にします。
-      ![クラレ ユニバーサルボンドクイックER](/api/proxy-image?url=https://dental.kuraraynoritake.com/media/filer_public_thumbnails/filer_public/ea/fc/eafce7e8-2edc-4340-9854-32ae38d2a6a6/universal_bond_quick_er_main.jpg__440x440_q85_subsampling-2.jpg)
+      ![クラレ ユニバーサルボンドクイックER](https://dental.kuraraynoritake.com/media/filer_public_thumbnails/filer_public/ea/fc/eafce7e8-2edc-4340-9854-32ae38d2a6a6/universal_bond_quick_er_main.jpg__440x440_q85_subsampling-2.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
-  * **2. GC ビューティボンド**: ワンステップ・セルフエッチング。操作簡便で、知覚過敏リスクを低減します。
-      ![GC ビューティボンド](/api/proxy-image?url=https://www.gcdental.co.jp/sys/img/products/1255/main.jpg)
+  * **2. Shofu ビューティボンド エクストリーム**: 3ステップボンディングに匹敵する高い接着力と耐久性を持ち、様々な窩洞形態に対応可能です。
+      ![Shofu ビューティボンド エクストリーム](https://www.shofu.co.jp/wp/wp-content/uploads/2020/09/BeautiBondXtreme_main.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
-  * **3. Shofu ビューティボンド エクストリーム**: 3ステップボンディングに匹敵する高い接着力と耐久性を持ち、様々な窩洞形態に対応可能です。
-      ![Shofu ビューティボンド エクストリーム](/api/proxy-image?url=https://www.shofu.co.jp/wp/wp-content/uploads/2020/09/BeautiBondXtreme_main.jpg)
+  * **3. デンツプライシロナ プライム&ボンドユニバーサル**: 万能型の接着システム。金属・セラミック・ジルコニアなど多様な材料に対応し、優れた接着性を実現します。
+      ![デンツプライシロナ プライム&ボンドユニバーサル](https://www.dentsplysirona.com/static-resources/images/products/restorative/PrimeAndBondUniversalBottle-DentsplySirona.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
-  * **4. デンツプライシロナ プライム&ボンドユニバーサル**: 万能型の接着システム。金属・セラミック・ジルコニアなど多様な材料に対応し、優れた接着性を実現します。
-      ![デンツプライシロナ プライム&ボンドユニバーサル](/api/proxy-image?url=https://www.dentsplysirona.com/static-resources/images/products/restorative/PrimeAndBondUniversalBottle-DentsplySirona.jpg)
+  * **4. 3M スコッチボンド ユニバーサルプラス**: 高い信頼性と象牙質接着性を兼ね備え、優れた封鎖性を提供します。
+      ![3M スコッチボンド ユニバーサルプラス](https://multimedia.3m.com/mws/media/1885994P/scotchbond-universal-plus-vial-li.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
-  * **5. 3M スコッチボンド ユニバーサルプラス**: 高い信頼性と象牙質接着性を兼ね備え、優れた封鎖性を提供します。
-      ![3M スコッチボンド ユニバーサルプラス](/api/proxy-image?url=https://multimedia.3m.com/mws/media/1885994P/scotchbond-universal-plus-vial-li.jpg)
-      *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
-  * **6. クラレ ボンドマーライトレス**: デュアルキュア型の接着システム。光が届きにくい深部窩洞やコア築造、間接修復物の接着に最適です。
-      ![クラレ ボンドマーライトレス](/api/proxy-image?url=https://www.tokuyama-dental.co.jp/product/bondmerlightless/img/main_img.jpg)
+  * **5. クラレ ボンドマーライトレス**: デュアルキュア型の接着システム。光が届きにくい深部窩洞やコア築造、間接修復物の接着に最適です。
+      ![クラレ ボンドマーライトレス](https://www.tokuyama-dental.co.jp/product/bondmerlightless/img/main_img.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
 
 #### 2.3 インレー（詰め物）
@@ -151,7 +148,7 @@
 
 * **【接着阻害因子の完全除去による臨床的エビデンス】**
   * 当院では、う蝕処置、CAD/CAM冠、自費補綴物（ジルコニア、e.max、ゴールド）のセット、およびコア築造の際、接着強度の低下を防ぐために**「カタナクリーナー」による清掃を必須工程**としています。
-  * ![カタナクリーナー製品画像](/api/proxy-image?url=https://kuraraynoritake.jp/katana-cleaner/img/product_img.png)
+  * ![カタナクリーナー製品画像](https://kuraraynoritake.jp/katana-cleaner/img/product_img.png)
 * **成分と物性**:
   * **MDP塩**: クラレ独自のリン酸エステル系モノマー。界面活性作用により、唾液、血液、仮着材の残留物などの接着阻害因子を強力に剥がし浮かせます。
   * **弱酸性（pH 4.5）**: 歯質（象牙質・エナメル質）を過度に脱灰せず、知覚過敏のリスクを抑えながら口腔内で安全に使用できます。
@@ -169,7 +166,7 @@
 
 * **【デジタル歯科学会・日本歯科CAD/CAM学会 推奨基準】**
   * 当院では、iTeroおよびKAGURA（神樂）を用いた高精度な光学印象を実施しています。
-  * ![KAGURA Smart](/api/proxy-image?url=public/images/kagura_ios_scanner_image_1772266971995.png)
+  * ![KAGURA Smart](/api/proxy-image?path=images/kagura_ios_scanner_image_1772266971995.png)
 * **主要機器の特性**:
   * **iTero Element 5D**: 矯正（インビザライン）および包括診療用。近赤外光（NIRI）によるう蝕検知機能を備え、タイムラプスによる経過観察が可能。
   * **KAGURA（神樂）**: 日本発の超軽量（138g）IOS。驚異的なスキャンスピードと、技工CAD（exocad）とのシームレスな連携が強み。
@@ -190,7 +187,7 @@
     3. **口腔内＆顔貌写真（標準8枚〜12枚法）**:
         * 基本5枚法（正面、左右側方、上下顎咬合面）。
         * 補助的に、**iPhoneの専用アプリ（Invisalign Practice App等）** を活用した動的なスマイル確認や遠隔モニタリング用撮影。
-        * ![iPhoneによる撮影イメージ](/api/proxy-image?url=public/images/dental_hygiene_instruction_illustration_1772205666042.png)
+        * ![iPhoneによる撮影イメージ](/api/proxy-image?path=images/dental_hygiene_instruction_illustration_1772205666042.png)
     4. **パノラマ・デンタルX線**: 全体像と個々の歯周組織状況の確認。
 * **インビザライン社の情報に基づく活用**:
   * **Virtual Care**: iPhoneアプリを通じて、自宅での装着状況をモニタリング。
@@ -259,7 +256,7 @@
 
 ### 2.1 初診・再初診時の対応と客観的資料採得
 
-![診療ユニット](/api/proxy-image?url=https://dr-coyass.com/_src/12240/2.jpg)
+![診療ユニット](https://dr-coyass.com/_src/12240/2.jpg)
 
 * 資料採得の規格と手順（パノラマ・デンタルX線写真、口腔内規格写真5枚法など）
   * **【目的】**：客観的説明のための「比較材料（ベースライン）」として高いクオリティの写真を撮ること。

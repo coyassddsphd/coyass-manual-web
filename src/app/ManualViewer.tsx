@@ -384,9 +384,25 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                 strong: ({ children }) => <strong className="text-slate-900 font-black bg-yellow-100 px-1 rounded-sm">{children}</strong>,
                                                 img: ({ src, alt }) => {
                                                     const isLogo = alt?.includes("ロゴ") || alt?.includes("logo");
-                                                    // キャッシュ回避用のクエリパラメータ付与
                                                     const srcUrl = typeof src === 'string' ? src : "";
-                                                    const imgSrc = srcUrl ? `${srcUrl}${srcUrl.includes('?') ? '&' : '?'}v=${Date.now()}` : "";
+
+                                                    // 画像URLをproxy-image API経由に変換する
+                                                    let proxiedSrc = srcUrl;
+                                                    if (srcUrl) {
+                                                        if (srcUrl.startsWith('/images/') || srcUrl.startsWith('images/')) {
+                                                            // /images/xxx.jpg → /api/proxy-image?path=images/xxx.jpg
+                                                            const pathPart = srcUrl.startsWith('/') ? srcUrl.slice(1) : srcUrl;
+                                                            proxiedSrc = `/api/proxy-image?path=${pathPart}`;
+                                                        } else if (srcUrl.includes('/api/proxy-image?url=')) {
+                                                            // 古い ?url= 形式を ?path= 形式に正規化
+                                                            proxiedSrc = srcUrl.replace('/api/proxy-image?url=public/images/', '/api/proxy-image?path=images/')
+                                                                .replace('/api/proxy-image?url=images/', '/api/proxy-image?path=images/')
+                                                                .replace('/api/proxy-image?url=', '/api/proxy-image?path=');
+                                                        }
+                                                        // すでに /api/proxy-image?path= 形式 or 外部URL は変換しない
+                                                    }
+                                                    // キャッシュ回避用のクエリパラメータ付与
+                                                    const imgSrc = proxiedSrc ? `${proxiedSrc}${proxiedSrc.includes('?') ? '&' : '?'}v=${Date.now()}` : "";
 
                                                     return (
                                                         <div className={`relative group/img-container my-10 ${isLogo ? 'max-w-[200px]' : 'w-full'}`}>
