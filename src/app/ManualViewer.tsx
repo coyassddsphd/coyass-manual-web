@@ -137,14 +137,31 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
         if (!file) return;
 
         setIsLoading(true);
-        setMessage("画像を最適化中...");
+        setMessage(file.type.startsWith('image/') ? "画像を最適化中..." : "ファイルを読み込み中...");
+
         try {
-            const resized = await resizeImage(file);
-            setAttachedImage(resized);
+            if (file.type.startsWith('image/')) {
+                const resized = await resizeImage(file);
+                setAttachedImage(resized);
+            } else if (file.type === 'application/pdf') {
+                const reader = new FileReader();
+                const base64Promise = new Promise<{ data: string, mimeType: string, previewUrl: string }>((resolve) => {
+                    reader.onload = (e) => {
+                        resolve({
+                            data: (e.target?.result as string).split(',')[1],
+                            mimeType: 'application/pdf',
+                            previewUrl: '/pdf-icon.png' // PDF用のダミープレビュー（アイコン）
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                });
+                const pdfData = await base64Promise;
+                setAttachedImage(pdfData);
+            }
             setMessage("");
         } catch (err) {
-            console.error("Image resize error:", err);
-            setMessage("❌ 画像の読み込みに失敗しました");
+            console.error("File loading error:", err);
+            setMessage("❌ ファイルの読み込みに失敗しました");
         } finally {
             setIsLoading(false);
         }
@@ -437,7 +454,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                             <Image src="/logos/migakuma.png" alt="migakuma" width={42} height={42} />
                         </div>
                         <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">
-                            &copy; {isMounted ? new Date().getFullYear() : ""} Nakameguro Coyasu Dental Clinic. Powered by Gemini AI.
+                            &copy; {isMounted ? new Date().getFullYear() : ""} Nakameguro Coyass Dental Clinic. Powered by Gemini AI.
                         </p>
                     </footer>
                 </div>
@@ -512,21 +529,28 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                             type="file"
                                             ref={fileInputRef}
                                             className="hidden"
-                                            accept="image/*"
+                                            accept="image/*,application/pdf"
                                             onChange={handleFileChange}
                                         />
 
                                         {attachedImage ? (
-                                            <div className="relative w-full h-32">
-                                                <Image
-                                                    src={attachedImage.previewUrl}
-                                                    alt="Preview"
-                                                    fill
-                                                    className="object-contain rounded-xl"
-                                                />
+                                            <div className="relative w-full h-32 flex items-center justify-center bg-white rounded-xl border border-slate-100 overflow-hidden">
+                                                {attachedImage.mimeType === 'application/pdf' ? (
+                                                    <div className="flex flex-col items-center gap-2">
+                                                        <div className="p-3 bg-red-50 rounded-xl"><AlertCircle className="w-8 h-8 text-red-500" /></div>
+                                                        <span className="text-xs font-bold text-slate-500">PDF書類が選択されました</span>
+                                                    </div>
+                                                ) : (
+                                                    <Image
+                                                        src={attachedImage.previewUrl}
+                                                        alt="Preview"
+                                                        fill
+                                                        className="object-contain"
+                                                    />
+                                                )}
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setAttachedImage(null); }}
-                                                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-lg"
+                                                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-lg z-10"
                                                 >
                                                     <X className="w-4 h-4" />
                                                 </button>
@@ -537,7 +561,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                     <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100"><Camera className="w-6 h-6 text-slate-400" /></div>
                                                     <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100"><ImageIcon className="w-6 h-6 text-slate-400" /></div>
                                                 </div>
-                                                <p className="text-sm font-bold text-slate-500">タップして写真撮影 or 書類を選択</p>
+                                                <p className="text-sm font-bold text-slate-500">タップして写真撮影 or 書類(PDF)を選択</p>
                                             </>
                                         )}
                                     </div>
