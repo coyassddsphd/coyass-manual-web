@@ -19,10 +19,12 @@ export async function GET(request: Request) {
     try {
         // 外部URLの場合はそのまま取得
         if (urlParam.startsWith('http')) {
+            console.log(`[Proxy] Proxying external URL: ${urlParam}`);
             const res = await fetch(urlParam, {
                 headers: {
                     "Accept": "image/*, */*",
-                    "User-Agent": "Coyass-Manual-App/1.0"
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                    "Referer": "https://dr-coyass.com/" // 自分のドメインをRefererとして送ることで制限回避を試みる
                 },
                 cache: 'no-store'
             });
@@ -44,83 +46,93 @@ export async function GET(request: Request) {
             });
         }
 
-        // GitHub内部パスの場合
+        // --- GitHub内部パスの場合 ---
         if (!githubToken) {
             console.error("[Proxy] GITHUB_TOKEN is not set");
             return new Response("Server configuration error: Missing GITHUB_TOKEN", { status: 500 });
         }
 
-        // パスを正規化（先頭の/を除去、images/ プレフィックスを確認）
-        const imagePath = urlParam.startsWith('/') ? urlParam.slice(1) : urlParam;
+        // パス候補の生成 (public/images/, images/, 直接)
+        const purePath = urlParam.replace(/^(public\/|images\/|\/public\/|\/images\/|\/)/, '');
+        const pathCandidates = [
+            `public/images/${purePath}`,
+            `images/${purePath}`,
+            purePath
+        ];
 
-        console.log(`[Proxy] Attempting to fetch from GitHub API: ${imagePath}`);
+        for (const imagePath of pathCandidates) {
+            console.log(`[Proxy] Attempting GitHub path: ${imagePath}`);
+            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`;
 
-        // GitHub Contents API を使って画像を取得
-        const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`;
+            // 第1試行: rawコンテンツ取得方式
+            try {
+                const rawRes = await fetch(apiUrl, {
+                    headers: {
+                        "Authorization": `token ${githubToken}`,
+                        "Accept": "application/vnd.github.v3+raw",
+                        "User-Agent": "Coyass-Manual-App/1.0"
+                    },
+                    cache: 'no-store'
+                });
 
-        const apiRes = await fetch(apiUrl, {
-            headers: {
-                "Authorization": `token ${githubToken}`,
-                "Accept": "application/vnd.github.v3+raw",
-                "User-Agent": "Coyass-Manual-App/1.0"
-            },
-            cache: 'no-store'
-        });
+                if (rawRes.ok) {
+                    console.log(`[Proxy] Success (+raw): ${imagePath}`);
+                    const buffer = await rawRes.arrayBuffer();
+                    const ext = imagePath.split('.').pop()?.toLowerCase() || 'jpg';
+                    const contentTypeMap: Record<string, string> = {
+                        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+                        'gif': 'image/gif', 'webp': 'image/webp', 'svg': 'image/svg+xml'
+                    };
+                    return new Response(buffer, {
+                        headers: {
+                            'Content-Type': contentTypeMap[ext] || 'image/jpeg',
+                            'Cache-Control': 'public, max-age=3600',
+                            'X-Proxy-Source': 'GitHub-API-Raw',
+                            'X-Resolved-Path': imagePath
+                        },
+                    });
+                }
+            } catch (e) {
+                console.warn(`[Proxy] Raw fetch exception for ${imagePath}:`, e);
+            }
 
-        if (apiRes.ok) {
-            console.log(`[Proxy] GitHub API Success: ${imagePath}`);
-            const buffer = await apiRes.arrayBuffer();
-            const ext = imagePath.split('.').pop()?.toLowerCase() || 'jpg';
-            const contentTypeMap: Record<string, string> = {
-                'jpg': 'image/jpeg',
-                'jpeg': 'image/jpeg',
-                'png': 'image/png',
-                'gif': 'image/gif',
-                'webp': 'image/webp',
-                'svg': 'image/svg+xml',
-            };
-            const contentType = contentTypeMap[ext] || 'image/jpeg';
+            // 第2試行: JSON/Base64デコード方式 (実績あり)
+            try {
+                const jsonRes = await fetch(apiUrl, {
+                    headers: {
+                        "Authorization": `token ${githubToken}`,
+                        "Accept": "application/vnd.github.v3+json",
+                        "User-Agent": "Coyass-Manual-App/1.0"
+                    },
+                    cache: 'no-store'
+                });
 
-            return new Response(buffer, {
-                headers: {
-                    'Content-Type': contentType,
-                    'Cache-Control': 'public, max-age=3600',
-                    'X-Proxy-Source': 'GitHub-Contents-API'
-                },
-            });
+                if (jsonRes.ok) {
+                    console.log(`[Proxy] Success (JSON/Base64): ${imagePath}`);
+                    const data = await jsonRes.json();
+                    if (data.content) {
+                        const buffer = Buffer.from(data.content, 'base64');
+                        const ext = imagePath.split('.').pop()?.toLowerCase() || 'jpg';
+                        const contentTypeMap: Record<string, string> = {
+                            'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+                            'gif': 'image/gif', 'webp': 'image/webp', 'svg': 'image/svg+xml'
+                        };
+                        return new Response(buffer, {
+                            headers: {
+                                'Content-Type': contentTypeMap[ext] || 'image/jpeg',
+                                'Cache-Control': 'public, max-age=3600',
+                                'X-Proxy-Source': 'GitHub-API-Base64',
+                                'X-Resolved-Path': imagePath
+                            },
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn(`[Proxy] JSON fetch exception for ${imagePath}:`, e);
+            }
         }
 
-        const apiErrorInfo = await apiRes.text();
-        console.error(`[Proxy] GitHub API failed: ${imagePath} -> Status: ${apiRes.status}`, apiErrorInfo);
-
-        // フォールバック: raw.githubusercontent.com を試す
-        const rawUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/main/${imagePath}`;
-        console.log(`[Proxy] Attempting fallback to Raw URL: ${rawUrl}`);
-
-        const rawRes = await fetch(rawUrl, {
-            headers: {
-                "Authorization": `token ${githubToken}`,
-                "User-Agent": "Coyass-Manual-App/1.0"
-            },
-            cache: 'no-store'
-        });
-
-        if (rawRes.ok) {
-            console.log(`[Proxy] GitHub Raw Success: ${imagePath}`);
-            const buffer = await rawRes.arrayBuffer();
-            const contentType = rawRes.headers.get('Content-Type') || 'image/jpeg';
-            return new Response(buffer, {
-                headers: {
-                    'Content-Type': contentType,
-                    'Cache-Control': 'public, max-age=3600',
-                    'X-Proxy-Source': 'GitHub-Raw'
-                },
-            });
-        }
-
-        console.error(`[Proxy] GitHub Raw failed: ${imagePath} -> Status: ${rawRes.status}`);
-
-        return new Response(`Image not found: ${imagePath} (API: ${apiRes.status}, Raw: ${rawRes.status})`, { status: 404 });
+        return new Response(`Image not found in any candidates for: ${urlParam}`, { status: 404 });
 
     } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : "Unknown error";

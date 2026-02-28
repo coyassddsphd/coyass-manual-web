@@ -49,14 +49,14 @@ export async function POST(request: Request) {
             const timestamp = Date.now();
             const extension = imageData.mimeType.split('/')[1] || 'jpg';
             const fileName = `uploaded_${timestamp}.${extension}`;
-            // GitHubリポジトリのimagesディレクトリに保存
-            const imagePathInRepo = `images/${fileName}`;
+            // GitHubリポジトリのpublic/imagesディレクトリに保存 (プロキシのデフォルトパスに合わせる)
+            const imagePathInRepo = `public/images/${fileName}`;
             const imageApiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePathInRepo}`;
 
             const uploadImageRes = await fetch(imageApiUrl, {
                 method: "PUT",
                 headers: {
-                    "Authorization": `Bearer ${githubToken}`,
+                    "Authorization": `token ${githubToken}`, // tokenに統一
                     "Accept": "application/vnd.github.v3+json",
                     "Content-Type": "application/json",
                     "User-Agent": "Coyass-Manual-App"

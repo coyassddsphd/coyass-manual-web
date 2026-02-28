@@ -387,26 +387,17 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                     const srcUrl = typeof src === 'string' ? src : "";
 
                                                     // 画像URLをproxy-image API経由に変換する
-                                                    let proxiedSrc = srcUrl;
+                                                    let proxiedSrc = "";
                                                     if (srcUrl) {
-                                                        // すでに /api/proxy-image が含まれている場合はスキップ
                                                         if (srcUrl.includes('/api/proxy-image')) {
                                                             proxiedSrc = srcUrl;
                                                         } else if (srcUrl.startsWith('http://') || srcUrl.startsWith('https://')) {
-                                                            // 外部URL → サーバーサイドプロキシ経由（CORS/Refererブロック回避）
                                                             proxiedSrc = `/api/proxy-image?url=${encodeURIComponent(srcUrl)}`;
-                                                        } else if (srcUrl.startsWith('/images/')) {
-                                                            // /images/curaray... → public/images/curaray...
-                                                            proxiedSrc = `/api/proxy-image?path=public${srcUrl}`;
-                                                        } else if (srcUrl.startsWith('images/')) {
-                                                            // images/curaray... → public/images/curaray...
-                                                            proxiedSrc = `/api/proxy-image?path=public/${srcUrl}`;
-                                                        } else if (srcUrl.startsWith('/public/images/')) {
-                                                            // /public/images/curaray... → public/images/curaray...
-                                                            proxiedSrc = `/api/proxy-image?path=${srcUrl.slice(1)}`;
-                                                        } else if (srcUrl.startsWith('public/images/')) {
-                                                            // public/images/curaray... (そのまま)
-                                                            proxiedSrc = `/api/proxy-image?path=${srcUrl}`;
+                                                        } else {
+                                                            // ローカルパスまたは不明なパスは全て ?path= に投げる。
+                                                            // サーバー側のパス候補自動検索（public/images/等）に一任する。
+                                                            const cleanPath = srcUrl.startsWith('/') ? srcUrl.slice(1) : srcUrl;
+                                                            proxiedSrc = `/api/proxy-image?path=${encodeURIComponent(cleanPath)}`;
                                                         }
                                                     }
                                                     // キャッシュ回避用のクエリパラメータ付与
