@@ -395,14 +395,18 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                         } else if (srcUrl.startsWith('http://') || srcUrl.startsWith('https://')) {
                                                             // 外部URL → サーバーサイドプロキシ経由（CORS/Refererブロック回避）
                                                             proxiedSrc = `/api/proxy-image?url=${encodeURIComponent(srcUrl)}`;
-                                                        } else if (srcUrl.startsWith('/images/') || srcUrl.startsWith('images/')) {
-                                                            // /images/xxx.jpg → /api/proxy-image?path=public/images/xxx.jpg
-                                                            const pathPart = srcUrl.startsWith('/') ? srcUrl.slice(1) : srcUrl;
-                                                            proxiedSrc = `/api/proxy-image?path=public/${pathPart}`;
-                                                        } else if (srcUrl.startsWith('/public/images/') || srcUrl.startsWith('public/images/')) {
-                                                            // /public/images/xxx.jpg → proxy経由に変換
-                                                            const pathPart = srcUrl.startsWith('/') ? srcUrl.slice(1) : srcUrl;
-                                                            proxiedSrc = `/api/proxy-image?path=${pathPart}`;
+                                                        } else if (srcUrl.startsWith('/images/')) {
+                                                            // /images/curaray... → public/images/curaray...
+                                                            proxiedSrc = `/api/proxy-image?path=public${srcUrl}`;
+                                                        } else if (srcUrl.startsWith('images/')) {
+                                                            // images/curaray... → public/images/curaray...
+                                                            proxiedSrc = `/api/proxy-image?path=public/${srcUrl}`;
+                                                        } else if (srcUrl.startsWith('/public/images/')) {
+                                                            // /public/images/curaray... → public/images/curaray...
+                                                            proxiedSrc = `/api/proxy-image?path=${srcUrl.slice(1)}`;
+                                                        } else if (srcUrl.startsWith('public/images/')) {
+                                                            // public/images/curaray... (そのまま)
+                                                            proxiedSrc = `/api/proxy-image?path=${srcUrl}`;
                                                         }
                                                     }
                                                     // キャッシュ回避用のクエリパラメータ付与

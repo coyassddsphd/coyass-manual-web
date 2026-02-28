@@ -53,7 +53,7 @@ export async function GET(request: Request) {
         // パスを正規化（先頭の/を除去、images/ プレフィックスを確認）
         const imagePath = urlParam.startsWith('/') ? urlParam.slice(1) : urlParam;
 
-        console.log(`[Proxy] Fetching GitHub image: ${imagePath}`);
+        console.log(`[Proxy] Attempting to fetch from GitHub API: ${imagePath}`);
 
         // GitHub Contents API を使って画像を取得
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`;
@@ -68,6 +68,7 @@ export async function GET(request: Request) {
         });
 
         if (apiRes.ok) {
+            console.log(`[Proxy] GitHub API Success: ${imagePath}`);
             const buffer = await apiRes.arrayBuffer();
             const ext = imagePath.split('.').pop()?.toLowerCase() || 'jpg';
             const contentTypeMap: Record<string, string> = {
@@ -90,10 +91,12 @@ export async function GET(request: Request) {
         }
 
         const apiErrorInfo = await apiRes.text();
-        console.error(`[Proxy] GitHub API failed: ${imagePath} -> ${apiRes.status}`, apiErrorInfo);
+        console.error(`[Proxy] GitHub API failed: ${imagePath} -> Status: ${apiRes.status}`, apiErrorInfo);
 
         // フォールバック: raw.githubusercontent.com を試す
         const rawUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/main/${imagePath}`;
+        console.log(`[Proxy] Attempting fallback to Raw URL: ${rawUrl}`);
+
         const rawRes = await fetch(rawUrl, {
             headers: {
                 "Authorization": `token ${githubToken}`,
@@ -103,6 +106,7 @@ export async function GET(request: Request) {
         });
 
         if (rawRes.ok) {
+            console.log(`[Proxy] GitHub Raw Success: ${imagePath}`);
             const buffer = await rawRes.arrayBuffer();
             const contentType = rawRes.headers.get('Content-Type') || 'image/jpeg';
             return new Response(buffer, {
@@ -113,6 +117,8 @@ export async function GET(request: Request) {
                 },
             });
         }
+
+        console.error(`[Proxy] GitHub Raw failed: ${imagePath} -> Status: ${rawRes.status}`);
 
         return new Response(`Image not found: ${imagePath} (API: ${apiRes.status}, Raw: ${rawRes.status})`, { status: 404 });
 
