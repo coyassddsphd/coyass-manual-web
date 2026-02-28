@@ -120,15 +120,15 @@
 * **【使用ボンディング材の特性と取り扱い（臨床データ）】**
   * 当院では、症例や治療部位、接着メカニズムに応じて以下のボンディング材を使い分けています。
   * **1. クラレ ユニバーサルボンドクイックER**: 短時間で強力な接着力を発揮するセルフエッチングボンド。操作時間を短縮し、効率的な接着処置を可能にします。
-      ![クラレ ユニバーサルボンドクイックER](/api/proxy-image?url=https%3A%2F%2Fwww.kuraraynoritake.jp%2Fproduct%2Fimages%2Fitem%2Fkuraray_universal_bond_quick_er_main.jpg)
+      ![クラレ ユニバーサルボンドクイックER](/api/proxy-image?path=public/images/kuraray_universal_bond_quick_er.png)
   * **2. Shofu ビューティボンド エクストリーム**: 3ステップボンディングに匹敵する高い接着力と耐久性を持ち、様々な窩洞形態に対応可能です。
-      ![Shofu ビューティボンド エクストリーム](/api/proxy-image?url=https%3A%2F%2Fwww.shofu.co.jp%2Fpickup%2Fbeautibond_xtreme%2Fimg%2Fmain_v.png)
+      ![Shofu ビューティボンド エクストリーム](/api/proxy-image?path=public/images/shofu_beautibond_xtreme.png)
   * **3. デンツプライシロナ プライム&ボンドユニバーサル**: 万能型の接着システム。金属・セラミック・ジルコニアなど多様な材料に対応し、優れた接着性を実現します。
-      ![デンツプライシロナ プライム&ボンドユニバーサル](/api/proxy-image?url=https%3A%2F%2Fwww.dentsplysirona.com%2Fcontent%2Fdam%2Fdentsplysirona%2Fproducts%2Frestorative%2Fadhesives%2Fprime-and-bond-universal%2Fprime-and-bond-universal-bottle.png)
+      ![デンツプライシロナ プライム&ボンドユニバーサル](/api/proxy-image?path=public/images/dentsply_prime_and_bond_universal.png)
   * **4. 3M スコッチボンド ユニバーサルプラス**: 高い信頼性と象牙質接着性を兼ね備え、優れた封鎖性を提供します。
-      ![3M スコッチボンド ユニバーサルプラス](/api/proxy-image?url=https%3A%2F%2Fmultimedia.3m.com%2Fmws%2Fmedia%2F1864157P%2F3m-scotchbond-universal-plus-mixed-kit-bottle-vial.jpg)
+      ![3M スコッチボンド ユニバーサルプラス](/api/proxy-image?path=public/images/three_m_scotchbond_universal_plus.png)
   * **5. クラレ ボンドマーライトレス（トクヤマ）**: デュアルキュア型の接着システム。光が届きにくい深部窩洞やコア築造、間接修復物の接着に最適です。
-      ![ボンドマーライトレス](/api/proxy-image?url=https%3A%2F%2Fwww.tokuyama-dental.co.jp%2Fproducts%2Fimages%2Fbondmer_lightless2_set.jpg)
+      ![ボンドマーライトレス](/api/proxy-image?path=public/images/tokuyama_bondmer_lightless.png)
 
 #### 2.3 インレー（詰め物）
 
