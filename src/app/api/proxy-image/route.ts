@@ -64,39 +64,7 @@ export async function GET(request: Request) {
             console.log(`[Proxy] Attempting GitHub path: ${imagePath}`);
             const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`;
 
-            // 第1試行: rawコンテンツ取得方式
-            try {
-                const rawRes = await fetch(apiUrl, {
-                    headers: {
-                        "Authorization": `token ${githubToken}`,
-                        "Accept": "application/vnd.github.v3+raw",
-                        "User-Agent": "Coyass-Manual-App/1.0"
-                    },
-                    cache: 'no-store'
-                });
-
-                if (rawRes.ok) {
-                    console.log(`[Proxy] Success (+raw): ${imagePath}`);
-                    const buffer = await rawRes.arrayBuffer();
-                    const ext = imagePath.split('.').pop()?.toLowerCase() || 'jpg';
-                    const contentTypeMap: Record<string, string> = {
-                        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
-                        'gif': 'image/gif', 'webp': 'image/webp', 'svg': 'image/svg+xml'
-                    };
-                    return new Response(buffer, {
-                        headers: {
-                            'Content-Type': contentTypeMap[ext] || 'image/jpeg',
-                            'Cache-Control': 'public, max-age=3600',
-                            'X-Proxy-Source': 'GitHub-API-Raw',
-                            'X-Resolved-Path': imagePath
-                        },
-                    });
-                }
-            } catch (e) {
-                console.warn(`[Proxy] Raw fetch exception for ${imagePath}:`, e);
-            }
-
-            // 第2試行: JSON/Base64デコード方式 (実績あり)
+            // 第1試行: JSON/Base64デコード方式 (実績があり最も安定)
             try {
                 const jsonRes = await fetch(apiUrl, {
                     headers: {
@@ -129,6 +97,38 @@ export async function GET(request: Request) {
                 }
             } catch (e) {
                 console.warn(`[Proxy] JSON fetch exception for ${imagePath}:`, e);
+            }
+
+            // 第2試行: rawコンテンツ取得方式
+            try {
+                const rawRes = await fetch(apiUrl, {
+                    headers: {
+                        "Authorization": `token ${githubToken}`,
+                        "Accept": "application/vnd.github.v3+raw",
+                        "User-Agent": "Coyass-Manual-App/1.0"
+                    },
+                    cache: 'no-store'
+                });
+
+                if (rawRes.ok) {
+                    console.log(`[Proxy] Success (+raw): ${imagePath}`);
+                    const buffer = await rawRes.arrayBuffer();
+                    const ext = imagePath.split('.').pop()?.toLowerCase() || 'jpg';
+                    const contentTypeMap: Record<string, string> = {
+                        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+                        'gif': 'image/gif', 'webp': 'image/webp', 'svg': 'image/svg+xml'
+                    };
+                    return new Response(buffer, {
+                        headers: {
+                            'Content-Type': contentTypeMap[ext] || 'image/jpeg',
+                            'Cache-Control': 'public, max-age=3600',
+                            'X-Proxy-Source': 'GitHub-API-Raw',
+                            'X-Resolved-Path': imagePath
+                        },
+                    });
+                }
+            } catch (e) {
+                console.warn(`[Proxy] Raw fetch exception for ${imagePath}:`, e);
             }
         }
 

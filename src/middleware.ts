@@ -36,7 +36,8 @@ export const config = {
          * - _next/image (image optimization files)
          * - favicon.ico, sitemap.xml, robots.txt (metadata files)
          * - logos (公開画像フォルダ)
+         * - images (公開画像フォルダ)
          */
-        '/((?!api|_next/static|_next/image|favicon.ico|logos).*)',
+        '/((?!api|_next/static|_next/image|favicon.ico|logos|images).*)',
     ],
 }

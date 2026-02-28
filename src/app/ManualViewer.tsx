@@ -37,6 +37,8 @@ interface ImageData {
 }
 
 export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
+    // 画像URLを固定するためのバージョン管理（クライアントサイドでのみ実行）
+    const [stableVersion] = useState(() => Date.now().toString());
     const [markdown] = useState(initialMarkdown);
     const [selectedSection, setSelectedSection] = useState<string | null>(null);
     const [comment, setComment] = useState("");
@@ -386,7 +388,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                     const isLogo = alt?.includes("ロゴ") || alt?.includes("logo");
                                                     const srcUrl = typeof src === 'string' ? src : "";
 
-                                                    // 画像URLをproxy-image API経由に変換する
+                                                    // 画像URLをproxy-image API経由に変換する（レンダリング毎にURLを変えないようstableVersionを使用）
                                                     let proxiedSrc = "";
                                                     if (srcUrl) {
                                                         if (srcUrl.includes('/api/proxy-image')) {
@@ -394,24 +396,32 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                         } else if (srcUrl.startsWith('http://') || srcUrl.startsWith('https://')) {
                                                             proxiedSrc = `/api/proxy-image?url=${encodeURIComponent(srcUrl)}`;
                                                         } else {
-                                                            // ローカルパスまたは不明なパスは全て ?path= に投げる。
-                                                            // サーバー側のパス候補自動検索（public/images/等）に一任する。
+                                                            // 全て ?path= に投げる。サーバー側で補完する。
                                                             const cleanPath = srcUrl.startsWith('/') ? srcUrl.slice(1) : srcUrl;
                                                             proxiedSrc = `/api/proxy-image?path=${encodeURIComponent(cleanPath)}`;
                                                         }
                                                     }
-                                                    // キャッシュ回避用のクエリパラメータ付与
-                                                    const imgSrc = proxiedSrc ? `${proxiedSrc}${proxiedSrc.includes('?') ? '&' : '?'}v=${Date.now()}` : "";
+
+                                                    const finalImgSrc = proxiedSrc ? `${proxiedSrc}${proxiedSrc.includes('?') ? '&' : '?'}v=${stableVersion}` : "";
 
                                                     return (
                                                         <div className={`relative group/img-container my-10 ${isLogo ? 'max-w-[200px]' : 'w-full'}`}>
-                                                            {src && (
+                                                            {srcUrl && (
                                                                 <div className={isLogo ? "relative w-full h-auto" : "relative w-full aspect-video md:aspect-[16/9] shadow-2xl rounded-3xl overflow-hidden ring-1 ring-slate-200"}>
                                                                     <img
-                                                                        src={imgSrc}
+                                                                        src={finalImgSrc}
                                                                         alt={alt || "manual image"}
                                                                         className={`rounded-3xl ${isLogo ? 'h-auto w-auto' : 'w-full h-full object-cover transition-transform duration-700 group-hover/img-container:scale-105'}`}
                                                                         loading="lazy"
+                                                                        onError={(e) => {
+                                                                            // プロキシに失敗した場合の最後の手：直接パス（/images/...）を試みる
+                                                                            const target = e.target as HTMLImageElement;
+                                                                            const directPath = srcUrl.startsWith('/') ? srcUrl : `/${srcUrl}`;
+                                                                            if (srcUrl && !target.src.endsWith(directPath)) {
+                                                                                console.warn("Proxy failed, falling back to direct URL:", directPath);
+                                                                                target.src = directPath;
+                                                                            }
+                                                                        }}
                                                                     />
                                                                 </div>
                                                             )}
