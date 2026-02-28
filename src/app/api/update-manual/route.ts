@@ -93,13 +93,14 @@ ${comment}
         const callAIWithRetry = async (maxRetries = 2) => {
             for (let i = 0; i <= maxRetries; i++) {
                 try {
-                    const promptParts: any[] = [systemPrompt + userContext];
+                    const promptParts: (string | { inlineData: { data: string; mimeType: string } })[] = [systemPrompt + userContext];
                     if (imageData && imageData.data && imageData.mimeType) {
                         promptParts.push({ inlineData: { data: imageData.data, mimeType: imageData.mimeType } });
                     }
                     return await model.generateContent(promptParts);
-                } catch (err: any) {
-                    if (err.message?.includes("429") && i < maxRetries) {
+                } catch (err: unknown) {
+                    const errorMessage = err instanceof Error ? err.message : "";
+                    if (errorMessage.includes("429") && i < maxRetries) {
                         console.log(`Quota exceeded. Retrying in 10s... (Attempt ${i + 1}/${maxRetries})`);
                         await new Promise(resolve => setTimeout(resolve, 10000));
                         continue;

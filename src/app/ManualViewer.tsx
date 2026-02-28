@@ -13,7 +13,6 @@ import {
     AlertCircle,
     Search,
     BookOpen,
-    ArrowRight,
     MessageSquare,
     Image as ImageIcon,
     Camera
@@ -53,16 +52,19 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // セクション分割 (H2 or H3 で分割)
-    const sections = markdown.split(/\n(?=#{2,3} )/).filter((sec) => sec.trim() !== "");
+    // セクション分割 (H2, H3, or H4 で分割)
+    const sections = markdown.split(/\n(?=#{2,4} )/).filter((sec) => sec.trim() !== "");
 
-    // 目次のタイトルとレベル（H2=2, H3=3）を抽出
+    // 目次のタイトルとレベル（H2=2, H3=3, H4=4）を抽出
     const navigationItems = sections.map(sec => {
         const trimmedSec = sec.trim();
+        const h4Match = trimmedSec.match(/^#### (.*)/);
         const h3Match = trimmedSec.match(/^### (.*)/);
         const h2Match = trimmedSec.match(/^## (.*)/);
 
-        if (h3Match) {
+        if (h4Match) {
+            return { title: h4Match[1], level: 4 };
+        } else if (h3Match) {
             return { title: h3Match[1], level: 3 };
         } else if (h2Match) {
             return { title: h2Match[1], level: 2 };
@@ -285,16 +287,19 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                     activeSection === idx
                                         ? "bg-blue-50 text-blue-700 shadow-sm font-bold"
                                         : "text-slate-600 hover:bg-slate-50 font-medium",
-                                    item.level === 3 ? "ml-4" : ""
+                                    item.level === 3 ? "ml-4" : "",
+                                    item.level === 4 ? "ml-8" : ""
                                 )}
                             >
                                 <span className={cn(
                                     "w-1.5 h-1.5 rounded-full",
                                     activeSection === idx ? "bg-blue-600 animate-pulse" : "bg-slate-300",
-                                    item.level === 3 ? "w-1 h-1" : ""
+                                    item.level === 3 ? "w-1 h-1" : "",
+                                    item.level === 4 ? "w-0.5 h-0.5" : ""
                                 )} />
                                 <span className={cn(
-                                    item.level === 3 ? "text-[13px] opacity-80" : ""
+                                    item.level === 3 ? "text-[13px] opacity-80" : "",
+                                    item.level === 4 ? "text-[12px] opacity-60" : ""
                                 )}>
                                     {item.title}
                                 </span>
@@ -405,6 +410,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                                         };
                                                                         input.click();
                                                                     }}
+                                                                    title="写真を差し替える"
                                                                     className="absolute top-4 right-4 bg-white/90 backdrop-blur shadow-xl text-blue-600 px-4 py-2 rounded-xl text-xs font-black opacity-0 group-hover/img-container:opacity-100 transition-all flex items-center gap-2 hover:bg-blue-600 hover:text-white border border-blue-100"
                                                                 >
                                                                     <Camera className="w-4 h-4" />
@@ -507,6 +513,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                     <label className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-3" htmlFor="instructions">Change Instructions</label>
                                     <textarea
                                         id="instructions"
+                                        title="修正の指示を入力してください"
                                         className="w-full p-6 bg-white border-2 border-slate-100 rounded-[1.5rem] focus:outline-none focus:border-blue-600 transition-all resize-none text-slate-800 text-lg leading-relaxed placeholder:text-slate-300 shadow-sm"
                                         rows={3}
                                         placeholder="例：写真のグラフをマニュアルに追加して！"
@@ -585,6 +592,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                             <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-4 sticky bottom-0">
                                 <button
                                     onClick={() => setSelectedSection(null)}
+                                    title="キャンセル"
                                     className="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
                                     disabled={isLoading}
                                 >
