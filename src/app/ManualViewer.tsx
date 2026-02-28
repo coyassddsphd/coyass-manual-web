@@ -53,13 +53,23 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // セクション分割
-    const sections = markdown.split(/(?=\n## )/).filter((sec) => sec.trim() !== "");
+    // セクション分割 (H2 or H3 で分割)
+    const sections = markdown.split(/(?=\n#{2,3} )/).filter((sec) => sec.trim() !== "");
 
-    // 目次のタイトル抽出
-    const titles = sections.map(sec => {
-        const match = sec.match(/## (.*)/);
-        return match ? match[1] : "Untitled Section";
+    // 目次のタイトルとレベル（H2=2, H3=3）を抽出
+    const navigationItems = sections.map(sec => {
+        const h2Match = sec.match(/\n## (.*)/);
+        const h3Match = sec.match(/\n### (.*)/);
+
+        if (h3Match) {
+            return { title: h3Match[1], level: 3 };
+        } else if (h2Match) {
+            return { title: h2Match[1], level: 2 };
+        }
+
+        // フォールバック（最初の行をタイトルにする）
+        const firstLine = sec.trim().split('\n')[0].replace(/^#+\s*/, '');
+        return { title: firstLine || "Untitled", level: 2 };
     });
 
     // スクロール追従ハイライト
@@ -74,7 +84,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                     }
                 });
             },
-            { threshold: 0.2, rootMargin: "-10% 0% -70% 0%" }
+            { threshold: 0.1, rootMargin: "-10% 0% -70% 0%" }
         );
 
         sectionRefs.current.forEach((ref) => {
@@ -198,7 +208,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
     };
 
     const filteredSections = sections.filter((sec, idx) =>
-        titles[idx].toLowerCase().includes(searchQuery.toLowerCase()) ||
+        navigationItems[idx].title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         sec.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -249,22 +259,28 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
 
                     <nav className="space-y-1 flex-1">
                         <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">CHAPTERS</p>
-                        {titles.map((title, idx) => (
+                        {navigationItems.map((item, idx) => (
                             <button
                                 key={idx}
                                 onClick={() => scrollToSection(idx)}
                                 className={cn(
-                                    "w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3",
+                                    "w-full text-left px-4 py-2.5 rounded-xl text-sm transition-all flex items-center gap-3",
                                     activeSection === idx
-                                        ? "bg-blue-50 text-blue-700 shadow-sm"
-                                        : "text-slate-600 hover:bg-slate-50"
+                                        ? "bg-blue-50 text-blue-700 shadow-sm font-bold"
+                                        : "text-slate-600 hover:bg-slate-50 font-medium",
+                                    item.level === 3 ? "ml-4" : ""
                                 )}
                             >
                                 <span className={cn(
                                     "w-1.5 h-1.5 rounded-full",
-                                    activeSection === idx ? "bg-blue-600 animate-pulse" : "bg-slate-300"
+                                    activeSection === idx ? "bg-blue-600 animate-pulse" : "bg-slate-300",
+                                    item.level === 3 ? "w-1 h-1" : ""
                                 )} />
-                                {title}
+                                <span className={cn(
+                                    item.level === 3 ? "text-[13px] opacity-80" : ""
+                                )}>
+                                    {item.title}
+                                </span>
                             </button>
                         ))}
                     </nav>
