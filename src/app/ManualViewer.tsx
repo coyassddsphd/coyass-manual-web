@@ -352,17 +352,42 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                         <ReactMarkdown
                                             remarkPlugins={[remarkGfm]}
                                             components={{
-                                                p: ({ children }) => <div className="mb-6 leading-relaxed">{children}</div>,
+                                                h1: ({ children }) => <h1 className="text-3xl font-black text-slate-900 mb-8 pb-4 border-b-4 border-blue-600 inline-block">{children}</h1>,
+                                                h2: ({ children }) => (
+                                                    <h2 className="text-2xl font-black text-white bg-slate-900 px-6 py-4 rounded-2xl mb-8 shadow-lg flex items-center gap-3">
+                                                        <div className="w-2 h-8 bg-blue-500 rounded-full" />
+                                                        {children}
+                                                    </h2>
+                                                ),
+                                                h3: ({ children }) => (
+                                                    <h3 className="text-xl font-black text-blue-700 mb-6 flex items-center gap-2 border-l-8 border-blue-600 pl-4 py-1 bg-blue-50/50 rounded-r-xl">
+                                                        {children}
+                                                    </h3>
+                                                ),
+                                                h4: ({ children }) => (
+                                                    <h4 className="text-lg font-black text-sky-600 mb-4 flex items-center gap-2 border-l-4 border-sky-400 pl-3">
+                                                        {children}
+                                                    </h4>
+                                                ),
+                                                p: ({ children }) => <div className="mb-6 leading-loose text-slate-700 font-medium">{children}</div>,
+                                                ul: ({ children }) => <ul className="space-y-4 mb-8 ml-4">{children}</ul>,
+                                                li: ({ children }) => (
+                                                    <li className="flex gap-3 text-slate-600 font-semibold leading-relaxed">
+                                                        <div className="mt-1.5 w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+                                                        <span>{children}</span>
+                                                    </li>
+                                                ),
+                                                strong: ({ children }) => <strong className="text-slate-900 font-black bg-yellow-100 px-1 rounded-sm">{children}</strong>,
                                                 img: ({ src, alt }) => {
                                                     const isLogo = alt?.includes("ロゴ") || alt?.includes("logo");
                                                     return (
-                                                        <div className={`relative group/img-container my-8 ${isLogo ? 'max-w-[200px]' : 'w-full'}`}>
+                                                        <div className={`relative group/img-container my-10 ${isLogo ? 'max-w-[200px]' : 'w-full'}`}>
                                                             {src && (
-                                                                <div className={isLogo ? "relative w-full h-auto" : "relative w-full aspect-video md:aspect-[16/9]"}>
+                                                                <div className={isLogo ? "relative w-full h-auto" : "relative w-full aspect-video md:aspect-[16/9] shadow-2xl rounded-3xl overflow-hidden ring-1 ring-slate-200"}>
                                                                     <img
                                                                         src={src as string}
                                                                         alt={alt || "manual image"}
-                                                                        className={`rounded-2xl shadow-lg ${isLogo ? 'h-auto w-auto' : 'w-full object-cover'}`}
+                                                                        className={`rounded-3xl ${isLogo ? 'h-auto w-auto' : 'w-full h-full object-cover transition-transform duration-700 group-hover/img-container:scale-105'}`}
                                                                         loading="lazy"
                                                                     />
                                                                 </div>
@@ -409,10 +434,10 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                                         input.click();
                                                                     }}
                                                                     title="写真を差し替える"
-                                                                    className="absolute top-4 right-4 bg-white/90 backdrop-blur shadow-xl text-blue-600 px-4 py-2 rounded-xl text-xs font-black opacity-0 group-hover/img-container:opacity-100 transition-all flex items-center gap-2 hover:bg-blue-600 hover:text-white border border-blue-100"
+                                                                    className="absolute top-6 right-6 bg-white/95 backdrop-blur-md shadow-2xl text-blue-600 px-6 py-3 rounded-2xl text-sm font-black opacity-0 group-hover/img-container:opacity-100 transition-all flex items-center gap-3 hover:bg-blue-600 hover:text-white border border-blue-100 translate-y-2 group-hover/img-container:translate-y-0"
                                                                 >
-                                                                    <Camera className="w-4 h-4" />
-                                                                    写真に差し替える
+                                                                    <Camera className="w-5 h-5" />
+                                                                    写真を差し替える
                                                                 </button>
                                                             )}
                                                         </div>
