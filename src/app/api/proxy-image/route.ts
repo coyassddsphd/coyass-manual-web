@@ -4,14 +4,17 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     // 'path' または 'url' パラメータを受け取る（両方に対応）
-    const urlParam = searchParams.get('path') || searchParams.get('url');
+    const rawParam = searchParams.get('path') || searchParams.get('url');
     const githubToken = process.env.GITHUB_TOKEN;
     const repoOwner = "coyassddsphd";
     const repoName = "coyass-manual-web";
 
-    if (!urlParam) {
+    if (!rawParam) {
         return new Response("Missing URL/Path parameter", { status: 400 });
     }
+
+    // URLがエンコードされている場合はデコードする
+    const urlParam = decodeURIComponent(rawParam);
 
     try {
         // 外部URLの場合はそのまま取得
