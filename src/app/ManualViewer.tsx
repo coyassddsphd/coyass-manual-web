@@ -12,8 +12,12 @@ import {
     CheckCircle2,
     AlertCircle,
     Search,
+    ChevronRight,
+    Camera,
+    Image as ImageIcon,
+    Loader2,
+    LayoutPanelTop,
     BookOpen,
-    Camera
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -434,10 +438,10 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                                         input.click();
                                                                     }}
                                                                     title="写真を差し替える"
-                                                                    className="absolute top-6 right-6 bg-white/95 backdrop-blur-md shadow-2xl text-blue-600 px-6 py-3 rounded-2xl text-sm font-black opacity-0 group-hover/img-container:opacity-100 transition-all flex items-center gap-3 hover:bg-blue-600 hover:text-white border border-blue-100 translate-y-2 group-hover/img-container:translate-y-0"
+                                                                    className="absolute top-2 right-2 md:top-6 md:right-6 bg-white/95 backdrop-blur-md shadow-2xl text-blue-600 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-black opacity-100 md:opacity-0 group-hover/img-container:opacity-100 transition-all flex items-center gap-2 md:gap-3 hover:bg-blue-600 hover:text-white border border-blue-100 translate-y-0 md:translate-y-2 group-hover/img-container:translate-y-0"
                                                                 >
-                                                                    <Camera className="w-5 h-5" />
-                                                                    写真を差し替える
+                                                                    <Camera className="w-4 h-4 md:w-5 md:h-5" />
+                                                                    写真に差し替える
                                                                 </button>
                                                             )}
                                                         </div>
@@ -517,100 +521,44 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
                             onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-[640px] bg-white rounded-[32px] shadow-2xl overflow-hidden relative z-[1001] h-[90vh] md:h-auto"
                             style={{
                                 display: 'grid',
                                 gridTemplateRows: 'auto 1fr auto',
-                                maxHeight: '90vh',
-                                width: '100%',
-                                maxWidth: '640px',
-                                backgroundColor: 'white',
-                                borderRadius: '32px',
-                                overflow: 'hidden',
-                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                                zIndex: 1001,
-                                position: 'relative'
                             }}
                         >
                             {/* Header: Fixed */}
-                            <div style={{
-                                padding: '24px 32px',
-                                background: 'linear-gradient(135deg, #2563eb 0%, #4338ca 100%)',
-                                color: 'white',
-                                position: 'relative'
-                            }}>
-                                <h3 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '4px' }}>Editor Intelligence</h3>
-                                <p style={{ fontSize: '14px', opacity: 0.9 }}>AIがマニュアルの更新をサポートします。</p>
+                            <div className="p-6 md:p-8 bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative">
+                                <h3 className="text-xl md:text-2xl font-black mb-1">Editor Intelligence</h3>
+                                <p className="text-xs md:text-sm opacity-90 font-bold uppercase tracking-wider">AI Manual Assistant</p>
                                 <button
                                     onClick={() => setSelectedSection(null)}
-                                    style={{
-                                        position: 'absolute',
-                                        top: '24px',
-                                        right: '24px',
-                                        background: 'rgba(255,255,255,0.2)',
-                                        border: 'none',
-                                        borderRadius: '50%',
-                                        width: '40px',
-                                        height: '40px',
-                                        color: 'white',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
+                                    title="閉じる"
+                                    className="absolute top-6 right-6 bg-white/20 hover:bg-white/30 p-2 rounded-full text-white transition-all"
                                 >
                                     <X size={20} />
                                 </button>
                             </div>
 
                             {/* Body: Scrollable */}
-                            <div style={{
-                                padding: '32px',
-                                overflowY: 'auto',
-                                backgroundColor: 'white',
-                                minHeight: '300px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '24px'
-                            }}>
+                            <div className="p-6 md:p-8 overflow-y-auto bg-white flex flex-col gap-6">
                                 <div>
-                                    <label style={{ fontSize: '10px', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', display: 'block' }}>
-                                        Target Section
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">
+                                        Target Context
                                     </label>
-                                    <div style={{
-                                        padding: '16px',
-                                        backgroundColor: '#f8fafc',
-                                        borderRadius: '16px',
-                                        fontSize: '11px',
-                                        color: '#64748b',
-                                        border: '1px solid #e2e8f0',
-                                        maxHeight: '120px',
-                                        overflowY: 'auto',
-                                        whiteSpace: 'pre-wrap'
-                                    }}>
+                                    <div className="p-4 bg-slate-50 rounded-2xl text-[11px] text-slate-500 border border-slate-100 max-h-[100px] overflow-y-auto whitespace-pre-wrap leading-relaxed">
                                         {selectedSection}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label style={{ fontSize: '12px', fontWeight: 900, color: '#1e293b', marginBottom: '8px', display: 'block' }}>
-                                        修正の指示を入力
+                                    <label className="text-xs md:text-sm font-black text-slate-900 mb-3 block">
+                                        修正の指示を入力してください 📝
                                     </label>
                                     <textarea
                                         autoFocus
-                                        style={{
-                                            width: '100%',
-                                            padding: '20px',
-                                            backgroundColor: '#f1f5f9',
-                                            border: '2px solid #e2e8f0',
-                                            borderRadius: '20px',
-                                            fontSize: '18px',
-                                            lineHeight: '1.6',
-                                            color: '#0f172a',
-                                            minHeight: '180px',
-                                            outline: 'none',
-                                            resize: 'none'
-                                        }}
-                                        placeholder="例：器具の名前を正式名称に直して"
+                                        className="w-full p-5 md:p-6 bg-slate-50 border-2 border-slate-200 rounded-2xl md:rounded-3xl text-base md:text-lg leading-relaxed text-slate-900 min-h-[140px] md:min-h-[180px] focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400"
+                                        placeholder="例：器具の名前を正式名称に直して / 写真を追加したい"
                                         value={comment}
                                         onChange={(e) => setComment(e.target.value)}
                                         disabled={isLoading}
@@ -618,61 +566,46 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                 </div>
 
                                 <div>
-                                    <label style={{ fontSize: '12px', fontWeight: 900, color: '#1e293b', marginBottom: '12px', display: 'block' }}>
-                                        添付ファイル (任意)
+                                    <label className="text-xs md:text-sm font-black text-slate-900 mb-3 block">
+                                        添付ファイル（写真・PDF等）✨
                                     </label>
                                     <div
                                         onClick={() => !isLoading && fileInputRef.current?.click()}
-                                        style={{
-                                            border: '2px dashed #cbd5e1',
-                                            borderRadius: '20px',
-                                            padding: '24px',
-                                            textAlign: 'center',
-                                            cursor: 'pointer',
-                                            backgroundColor: attachedImage ? '#eff6ff' : '#f8fafc'
-                                        }}
+                                        className={cn(
+                                            "border-2 border-dashed rounded-2xl md:rounded-3xl p-6 md:p-8 text-center cursor-pointer transition-all",
+                                            attachedImage ? "bg-blue-50 border-blue-400" : "bg-slate-50 border-slate-200 hover:border-blue-400 hover:bg-white"
+                                        )}
                                     >
                                         <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
                                         {attachedImage ? (
-                                            <div style={{ color: '#2563eb', fontWeight: 700 }}>ファイルが選択されました</div>
+                                            <div className="flex flex-col items-center gap-2">
+                                                <ImageIcon className="w-8 h-8 text-blue-600" />
+                                                <span className="text-blue-600 font-black text-sm">ファイルがセットされました</span>
+                                            </div>
                                         ) : (
-                                            <div style={{ color: '#94a3b8', fontSize: '14px' }}>写真・PDFを選択</div>
+                                            <div className="flex flex-col items-center gap-2">
+                                                <Camera className="w-8 h-8 text-slate-400" />
+                                                <span className="text-slate-400 font-bold text-sm">ここをタップして写真を選択</span>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
 
                                 {message && (
-                                    <div style={{
-                                        padding: '16px',
-                                        borderRadius: '16px',
-                                        backgroundColor: message.includes('❌') ? '#fef2f2' : '#f0f9ff',
-                                        color: message.includes('❌') ? '#991b1b' : '#075985',
-                                        fontSize: '14px',
-                                        fontWeight: 700
-                                    }}>
+                                    <div className={cn(
+                                        "p-4 rounded-2xl text-sm font-black text-center animate-in fade-in slide-in-from-top-2",
+                                        message.includes('❌') ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-800"
+                                    )}>
                                         {message}
                                     </div>
                                 )}
                             </div>
 
                             {/* Footer */}
-                            <div style={{
-                                padding: '24px 32px',
-                                backgroundColor: '#f8fafc',
-                                borderTop: '1px solid #e2e8f0',
-                                display: 'flex',
-                                justifyContent: 'end',
-                                gap: '16px'
-                            }}>
+                            <div className="p-6 md:p-8 bg-slate-50 border-t border-slate-100 flex justify-end items-center gap-4">
                                 <button
                                     onClick={() => setSelectedSection(null)}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#94a3b8',
-                                        fontWeight: 700,
-                                        cursor: 'pointer'
-                                    }}
+                                    className="px-4 py-2 text-slate-400 font-black text-sm hover:text-slate-600 transition-colors"
                                     disabled={isLoading}
                                 >
                                     キャンセル
