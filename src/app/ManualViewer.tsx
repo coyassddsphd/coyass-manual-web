@@ -430,15 +430,28 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                         <div className="mt-10 flex justify-end">
                                             <button
                                                 onClick={() => {
-                                                    setSelectedSection(sec);
+                                                    // インテリジェント・コンテキスト抽出ロジック
+                                                    let textToEdit = sec;
+                                                    if (navigationItems[idx].level === 2) {
+                                                        let combinedText = sec;
+                                                        for (let i = idx + 1; i < sections.length; i++) {
+                                                            if (navigationItems[i].level === 2) break;
+                                                            combinedText += "\n\n" + sections[i];
+                                                        }
+                                                        textToEdit = combinedText;
+                                                    }
+
+                                                    // 状態を完全にリセットして新しいセクションを開く
+                                                    setSelectedSection(textToEdit);
                                                     setComment("");
                                                     setMessage("");
                                                     setAttachedImage(null);
+                                                    setIsLoading(false);
                                                 }}
-                                                className="group relative inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white text-sm font-bold rounded-2xl hover:bg-blue-600 transition-all hover:shadow-xl"
+                                                className="group relative inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white text-sm font-bold rounded-2xl hover:bg-blue-600 transition-all hover:shadow-xl active:scale-95"
                                             >
                                                 <Edit3 className="w-4 h-4" />
-                                                この項目をAIに更新指示する
+                                                {navigationItems[idx].level === 2 ? "章の構成を相談・変更する" : "この項目をAIに更新指示する"}
                                             </button>
                                         </div>
                                     )}
@@ -480,14 +493,15 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border border-slate-200"
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-200 grid grid-rows-[auto_1fr_auto] overflow-hidden max-h-[90vh]"
                         >
-                            {/* Header: 固定 */}
-                            <div className="p-8 bg-gradient-to-br from-blue-600 to-indigo-700 text-white shrink-0 relative">
+                            {/* Header: Fixed */}
+                            <div className="p-8 bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative flex-shrink-0">
                                 <h3 className="text-2xl font-black tracking-tight mb-1">Editor Intelligence</h3>
                                 <p className="text-blue-100 text-sm font-medium opacity-90">
                                     {selectedSection.trim().split('\n')[0].startsWith('## ')
-                                        ? "章全体の構成を最適化します。要望を入力してください。"
+                                        ? "章全体の構成を最適化・整理します。指示を入力してください。"
                                         : "この項目の内容や表現をAIがアップデートします。"}
                                 </p>
                                 <button
@@ -500,21 +514,22 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                 </button>
                             </div>
 
-                            {/* Body: スクロールエリア（最大高を制限して確実な表示を保証） */}
-                            <div className="overflow-y-auto p-8 space-y-8 bg-white max-h-[60vh]">
+                            {/* Body: Scrollable with Grid-safe height */}
+                            <div className="overflow-y-auto p-8 space-y-8 bg-white min-h-[400px]">
                                 <div>
-                                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Target Context</label>
-                                    <div className="bg-slate-50 p-5 rounded-2xl text-xs text-slate-500 italic border border-slate-100 max-h-32 overflow-y-auto leading-relaxed shadow-inner">
+                                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Target Context (Editing Mode)</label>
+                                    <div className="bg-slate-50 p-5 rounded-2xl text-[11px] text-slate-500 italic border border-slate-100 max-h-32 overflow-y-auto leading-relaxed shadow-inner">
                                         {selectedSection}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3" htmlFor="instructions-area">Change Instructions</label>
+                                    <label className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-3" htmlFor="instructions-area">Change Instructions</label>
                                     <textarea
                                         id="instructions-area"
                                         autoFocus
-                                        className="w-full p-6 bg-white border-2 border-slate-100 rounded-2xl focus:outline-none focus:border-blue-600 transition-all resize-none text-slate-800 text-base leading-relaxed placeholder:text-slate-300 shadow-sm min-h-[140px]"
+                                        spellCheck={false}
+                                        className="w-full p-6 bg-slate-50 border-2 border-slate-200 rounded-3xl focus:outline-none focus:border-blue-600 focus:bg-white transition-all resize-none text-slate-900 text-lg lg:text-xl leading-relaxed placeholder:text-slate-400 shadow-sm min-h-[200px]"
                                         placeholder="例：写真の手順を箇条書きで追加して！"
                                         value={comment}
                                         onChange={(e) => setComment(e.target.value)}
@@ -523,12 +538,12 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                 </div>
 
                                 <div>
-                                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3">Photo / Documents (任意)</label>
+                                    <label className="flex items-center gap-2 text-xs font-black text-slate-900 uppercase tracking-widest mb-3">Photo / Documents (任意)</label>
                                     <div
                                         onClick={() => !isLoading && fileInputRef.current?.click()}
                                         className={cn(
-                                            "relative border-2 border-dashed rounded-2xl p-8 transition-all cursor-pointer flex flex-col items-center justify-center gap-3",
-                                            attachedImage ? "border-blue-200 bg-blue-50/30" : "border-slate-200 hover:border-blue-400 bg-slate-50/10 hover:bg-slate-50"
+                                            "relative border-2 border-dashed rounded-3xl p-8 transition-all cursor-pointer flex flex-col items-center justify-center gap-4 group/upload",
+                                            attachedImage ? "border-blue-200 bg-blue-50/30" : "border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-white"
                                         )}
                                     >
                                         <input
@@ -540,11 +555,11 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                         />
 
                                         {attachedImage ? (
-                                            <div className="relative w-full h-32 flex items-center justify-center bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
+                                            <div className="relative w-full h-40 flex items-center justify-center bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-md">
                                                 {attachedImage.mimeType === 'application/pdf' ? (
                                                     <div className="flex flex-col items-center gap-2">
-                                                        <div className="p-3 bg-red-50 rounded-xl"><AlertCircle className="w-8 h-8 text-red-500" /></div>
-                                                        <span className="text-[10px] font-bold text-slate-500 text-center px-4 truncate w-full">PDF書類が選択されました</span>
+                                                        <div className="p-4 bg-red-50 rounded-2xl shadow-sm"><AlertCircle className="w-10 h-10 text-red-500" /></div>
+                                                        <span className="text-xs font-bold text-slate-600">PDF書類が選択されました</span>
                                                     </div>
                                                 ) : (
                                                     <Image
@@ -556,18 +571,18 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                 )}
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setAttachedImage(null); }}
-                                                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-lg z-10 hover:bg-red-600 transition-colors"
+                                                    className="absolute top-3 right-3 p-1.5 bg-red-500 text-white rounded-full shadow-lg z-10 hover:bg-red-600 transition-colors"
                                                 >
-                                                    <X className="w-4 h-4" />
+                                                    <X className="w-5 h-5" />
                                                 </button>
                                             </div>
                                         ) : (
                                             <>
                                                 <div className="flex gap-4">
-                                                    <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100"><Camera className="w-6 h-6 text-slate-400" /></div>
-                                                    <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100"><ImageIcon className="w-6 h-6 text-slate-400" /></div>
+                                                    <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100 group-hover/upload:scale-110 transition-transform"><Camera className="w-8 h-8 text-slate-400" /></div>
+                                                    <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100 group-hover/upload:scale-110 transition-transform"><ImageIcon className="w-8 h-8 text-slate-400" /></div>
                                                 </div>
-                                                <p className="text-xs font-bold text-slate-500">タップして写真撮影 or 書類(PDF)を選択</p>
+                                                <p className="text-sm font-bold text-slate-500">タップして写真撮影 or 書類(PDF)を選択</p>
                                             </>
                                         )}
                                     </div>
@@ -578,21 +593,21 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         className={cn(
-                                            "p-6 rounded-2xl flex items-center gap-4 border",
+                                            "p-6 rounded-3xl flex items-center gap-4 border-2",
                                             message.includes("❌") ? "bg-red-50 border-red-100 text-red-700" : "bg-blue-50 border-blue-100 text-blue-800"
                                         )}
                                     >
-                                        {message.includes("❌") ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle2 className="w-5 h-5 flex-shrink-0 animate-bounce text-blue-500" />}
-                                        <span className="text-sm font-black">{message}</span>
+                                        {message.includes("❌") ? <AlertCircle className="w-6 h-6 flex-shrink-0" /> : <CheckCircle2 className="w-6 h-6 flex-shrink-0 animate-bounce text-blue-500" />}
+                                        <span className="text-[15px] font-black tracking-tight">{message}</span>
                                     </motion.div>
                                 )}
                             </div>
 
-                            {/* Footer: 固定 */}
-                            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-4 shrink-0">
+                            {/* Footer: Fixed */}
+                            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-5 flex-shrink-0">
                                 <button
                                     onClick={() => setSelectedSection(null)}
-                                    className="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                                    className="px-8 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
                                     disabled={isLoading}
                                 >
                                     キャンセル
@@ -600,7 +615,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                 <button
                                     onClick={handleSubmit}
                                     disabled={isLoading || !comment.trim()}
-                                    className="px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-2xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg shadow-blue-200 active:scale-95"
+                                    className="px-10 py-4 bg-blue-600 text-white text-base font-black rounded-2xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-xl shadow-blue-100 active:scale-95"
                                 >
                                     {isLoading ? "AIが解析中..." : "AIに更新を指示する"}
                                 </button>
