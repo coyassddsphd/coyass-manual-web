@@ -389,12 +389,12 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                     // 画像URLをproxy-image API経由に変換する
                                                     let proxiedSrc = srcUrl;
                                                     if (srcUrl) {
-                                                        if (srcUrl.startsWith('http://') || srcUrl.startsWith('https://')) {
+                                                        // すでに /api/proxy-image が含まれている場合はスキップ
+                                                        if (srcUrl.includes('/api/proxy-image')) {
+                                                            proxiedSrc = srcUrl;
+                                                        } else if (srcUrl.startsWith('http://') || srcUrl.startsWith('https://')) {
                                                             // 外部URL → サーバーサイドプロキシ経由（CORS/Refererブロック回避）
-                                                            // すでに /api/proxy-image?url= or ?path= の場合はスキップ
-                                                            if (!srcUrl.includes('/api/proxy-image')) {
-                                                                proxiedSrc = `/api/proxy-image?url=${encodeURIComponent(srcUrl)}`;
-                                                            }
+                                                            proxiedSrc = `/api/proxy-image?url=${encodeURIComponent(srcUrl)}`;
                                                         } else if (srcUrl.startsWith('/images/') || srcUrl.startsWith('images/')) {
                                                             // /images/xxx.jpg → /api/proxy-image?path=public/images/xxx.jpg
                                                             const pathPart = srcUrl.startsWith('/') ? srcUrl.slice(1) : srcUrl;
@@ -403,9 +403,6 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                             // /public/images/xxx.jpg → proxy経由に変換
                                                             const pathPart = srcUrl.startsWith('/') ? srcUrl.slice(1) : srcUrl;
                                                             proxiedSrc = `/api/proxy-image?path=${pathPart}`;
-                                                        } else if (srcUrl.includes('/api/proxy-image?url=')) {
-                                                            // 古い ?url= 形式はそのまま
-                                                            proxiedSrc = srcUrl;
                                                         }
                                                     }
                                                     // キャッシュ回避用のクエリパラメータ付与

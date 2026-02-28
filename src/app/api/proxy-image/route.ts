@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
             if (!res.ok) {
                 console.error(`[Proxy] External URL failed: ${urlParam} -> ${res.status}`);
-                return new Response(`Error: ${res.status}`, { status: res.status });
+                return new Response(`External URL Error: ${res.status}`, { status: res.status });
             }
 
             const buffer = await res.arrayBuffer();
@@ -55,12 +55,12 @@ export async function GET(request: Request) {
 
         console.log(`[Proxy] Fetching GitHub image: ${imagePath}`);
 
-        // GitHub Contents API を使って画像を取得（Accept: vnd.github.v3+raw でrawコンテンツ直接取得）
+        // GitHub Contents API を使って画像を取得
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`;
 
         const apiRes = await fetch(apiUrl, {
             headers: {
-                "Authorization": `Bearer ${githubToken}`,
+                "Authorization": `token ${githubToken}`,
                 "Accept": "application/vnd.github.v3+raw",
                 "User-Agent": "Coyass-Manual-App/1.0"
             },
@@ -69,7 +69,6 @@ export async function GET(request: Request) {
 
         if (apiRes.ok) {
             const buffer = await apiRes.arrayBuffer();
-            // ファイル拡張子からContent-Typeを判定
             const ext = imagePath.split('.').pop()?.toLowerCase() || 'jpg';
             const contentTypeMap: Record<string, string> = {
                 'jpg': 'image/jpeg',
@@ -90,7 +89,8 @@ export async function GET(request: Request) {
             });
         }
 
-        console.error(`[Proxy] GitHub API failed: ${imagePath} -> ${apiRes.status}`);
+        const apiErrorInfo = await apiRes.text();
+        console.error(`[Proxy] GitHub API failed: ${imagePath} -> ${apiRes.status}`, apiErrorInfo);
 
         // フォールバック: raw.githubusercontent.com を試す
         const rawUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/main/${imagePath}`;
@@ -114,7 +114,7 @@ export async function GET(request: Request) {
             });
         }
 
-        return new Response(`Image not found: ${imagePath} (${apiRes.status})`, { status: 404 });
+        return new Response(`Image not found: ${imagePath} (API: ${apiRes.status}, Raw: ${rawRes.status})`, { status: 404 });
 
     } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : "Unknown error";
