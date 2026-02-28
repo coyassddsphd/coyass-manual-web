@@ -384,12 +384,16 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                 strong: ({ children }) => <strong className="text-slate-900 font-black bg-yellow-100 px-1 rounded-sm">{children}</strong>,
                                                 img: ({ src, alt }) => {
                                                     const isLogo = alt?.includes("ロゴ") || alt?.includes("logo");
+                                                    // キャッシュ回避用のクエリパラメータ付与
+                                                    const srcUrl = typeof src === 'string' ? src : "";
+                                                    const imgSrc = srcUrl ? `${srcUrl}${srcUrl.includes('?') ? '&' : '?'}v=${Date.now()}` : "";
+
                                                     return (
                                                         <div className={`relative group/img-container my-10 ${isLogo ? 'max-w-[200px]' : 'w-full'}`}>
                                                             {src && (
                                                                 <div className={isLogo ? "relative w-full h-auto" : "relative w-full aspect-video md:aspect-[16/9] shadow-2xl rounded-3xl overflow-hidden ring-1 ring-slate-200"}>
                                                                     <img
-                                                                        src={src as string}
+                                                                        src={imgSrc}
                                                                         alt={alt || "manual image"}
                                                                         className={`rounded-3xl ${isLogo ? 'h-auto w-auto' : 'w-full h-full object-cover transition-transform duration-700 group-hover/img-container:scale-105'}`}
                                                                         loading="lazy"
