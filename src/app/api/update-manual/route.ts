@@ -40,6 +40,43 @@ export async function POST(request: Request) {
         }
 
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePathInRepo}`;
+
+        let newImagePath = "";
+
+        // --- [NEW] 画像の物理保存処理 (imageDataがある場合) ---
+        if (imageData && imageData.data && imageData.mimeType) {
+            console.log("Image data detected. Uploading to GitHub...");
+            const timestamp = Date.now();
+            const extension = imageData.mimeType.split('/')[1] || 'png';
+            const fileName = `uploaded_${timestamp}.${extension}`;
+            const imagePathInRepo = `public/images/${fileName}`;
+            const imageApiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePathInRepo}`;
+
+            const uploadImageRes = await fetch(imageApiUrl, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `Bearer ${githubToken}`,
+                    "Accept": "application/vnd.github.v3+json",
+                    "Content-Type": "application/json",
+                    "User-Agent": "Coyass-Manual-App"
+                },
+                body: JSON.stringify({
+                    message: `Upload image: ${fileName}`,
+                    content: imageData.data, // Base64そのままでOK
+                    branch: "main"
+                })
+            });
+
+            if (uploadImageRes.ok) {
+                newImagePath = `/images/${fileName}`;
+                console.log(`Image uploaded successfully: ${newImagePath}`);
+            } else {
+                const errText = await uploadImageRes.text();
+                console.error("Image upload failed:", errText);
+                throw new Error(`画像のアップロードに失敗しました: ${errText}`);
+            }
+        }
+
         const getFileRes = await fetch(apiUrl, {
             headers: {
                 "Authorization": `Bearer ${githubToken}`,
@@ -59,23 +96,26 @@ export async function POST(request: Request) {
         const fullMarkdown = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
         // --- AIによるマニュアルの自己修復と更新 ---
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const systemPrompt = `あなたは高度な歯科医院マニュアルの編集者です。
 与えられた「マニュアル全文」の中から、指定された「修正対象セクション」を特定し、スタッフの「要望コメント」に基づいて内容を更新してください。
+
+【画像処理に関する重要ルール】
+${newImagePath ? `- **新しい画像がアップロードされました**: 現在のセクション内にある画像タグ（![...]）のパスを、必ず \`${newImagePath}\` に書き換えてください。もし画像タグがない場合は。適切な場所に \`![イメージ](${newImagePath})\` を新設してください。` : "- 画像のパスは既存のものを維持してください。"}
+- 画像パスは必ず \`/images/xxxxx.png\` のようなWeb相対パス形式に統一してください。 \`file:///...\` のようなパスは絶対に使用しないでください。
 
 【編集モードの自動切り替え】
 - **個別項目修正モード**: 渡されたテキストが単一のセクション（例: H3のみ）の場合、その内容を忠実に更新してください。
 - **章全体構造モード**: 渡されたテキストに章（H2）と複数の小項目（H3, H4）が含まれる場合、ユーザーの要望に応じて「項目の入れ替え」「新しい項目の新設」「不要な項目の統合」など、章全体の構成をダイナミックに最適化してください。
 
-【添付ファイル（画像・PDF）の取り扱い】
-- **情報の抽出と反映**: 添付された画像やPDF書類がある場合は、記載されている内容（数値、手順、図表、注釈など）を正確に読み取り、マニュアル形式の「文字情報」に変換して適切に反映させてください。
+【情報の抽出と反映】
+- 添付された画像データ（imageData）がある場合は、記載されている内容（数値、手順、図表、注釈など）を正確に読み取り、マニュアル形式の「文字情報」に変換して適切に反映させてください。
 
 【最重要任務：自律的構造修復】
 1. **章番号の不整合修正**: 第3章の下にある項目が「4.1」になっているなど、章番号とセクション番号の不整合を見つけたら、自動的に正しい番号（例: 3.1）に修正してください。
 2. **フォーマットの維持**: Markdownの階層構造（##, ###）を崩さず、専門用語の統一感を保ってください。
 3. **最新情報の保持**: 更新対象以外のセクションは、一字一句変えずにそのまま保持してください。
-4. **自己検閲**: 保存前に「章番号は正しいか？」「重複はないか？」「日本語として自然か？」を再チェックし、完璧な状態で出力してください。
 
 【出力ルール】
 1. 修正・修復が完了した **マニュアルの「全文」** をMarkdown形式で出力してください。
@@ -92,7 +132,7 @@ ${originalText}
 ${comment}
 `;
 
-        console.log("Calling Gemini API (Full Manual Auto-Correction Mode)...");
+        console.log("Calling Gemini API (Image-Aware Mode)...");
 
         const callAIWithRetry = async (maxRetries = 2) => {
             for (let i = 0; i <= maxRetries; i++) {
@@ -126,14 +166,13 @@ ${comment}
             .replace(/\n?```$/, "")
             .trim();
 
-        console.log("AI generation completed (Full Healing). Length:", newFullMarkdown.length);
+        console.log("AI generation completed. New Image Path:", newImagePath);
 
         if (!newFullMarkdown || newFullMarkdown.length < fullMarkdown.length * 0.5) {
-            throw new Error("AIが有効なマニュアル全体を生成できませんでした。内容を保持したまま再試行してください。");
+            throw new Error("AIが有効なマニュアル全体を生成できませんでした。");
         }
 
         // --- GitHubへの保存 (最新のSHAを再取得して409 Conflictを回避) ---
-        console.log("Refetching latest SHA to avoid 409 Conflict...");
         const latestFileRes = await fetch(apiUrl, {
             headers: {
                 "Authorization": `Bearer ${githubToken}`,
@@ -161,7 +200,7 @@ ${comment}
                 "User-Agent": "Coyass-Manual-App"
             },
             body: JSON.stringify({
-                message: `Section update via AI: ${comment.substring(0, 30)}...`,
+                message: `Section update via AI: ${comment.substring(0, 30)}...${newImagePath ? ' and Image Upload' : ''}`,
                 content: encodedContent,
                 sha: latestSha, // 最新のSHAを使用
                 branch: "main"
