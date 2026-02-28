@@ -477,27 +477,24 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                             className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
                         />
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+                            className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border border-white/20"
                         >
-                            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-100">
-                                        <MessageSquare className="text-white w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl font-black text-slate-900 leading-tight">AIに改訂を依頼する</h3>
-                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">AI Automated Revision</p>
-                                    </div>
-                                </div>
+                            <div className="p-10 bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative">
+                                <h3 className="text-3xl font-black tracking-tight mb-2">Editor Intelligence</h3>
+                                <p className="text-blue-100 font-medium opacity-90">
+                                    {selectedSection.trim().split('\n')[0].startsWith('## ')
+                                        ? "章全体の構成を最適化します。どこに何を追加・変更したいか教えてください。"
+                                        : "この項目の内容や表現をAIがアップデートします。写真の追加も可能です。"}
+                                </p>
                                 <button
                                     onClick={() => setSelectedSection(null)}
-                                    className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+                                    className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
                                     disabled={isLoading}
                                 >
-                                    <X className="w-6 h-6 text-slate-400" />
+                                    <X className="w-6 h-6 text-white" />
                                 </button>
                             </div>
 
