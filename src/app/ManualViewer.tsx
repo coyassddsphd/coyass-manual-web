@@ -54,12 +54,13 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // セクション分割 (H2 or H3 で分割)
-    const sections = markdown.split(/(?=\n#{2,3} )/).filter((sec) => sec.trim() !== "");
+    const sections = markdown.split(/\n(?=#{2,3} )/).filter((sec) => sec.trim() !== "");
 
     // 目次のタイトルとレベル（H2=2, H3=3）を抽出
     const navigationItems = sections.map(sec => {
-        const h2Match = sec.match(/\n## (.*)/);
-        const h3Match = sec.match(/\n### (.*)/);
+        const trimmedSec = sec.trim();
+        const h3Match = trimmedSec.match(/^### (.*)/);
+        const h2Match = trimmedSec.match(/^## (.*)/);
 
         if (h3Match) {
             return { title: h3Match[1], level: 3 };
@@ -67,8 +68,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
             return { title: h2Match[1], level: 2 };
         }
 
-        // フォールバック（最初の行をタイトルにする）
-        const firstLine = sec.trim().split('\n')[0].replace(/^#+\s*/, '');
+        const firstLine = trimmedSec.split('\n')[0].replace(/^#+\s*/, '');
         return { title: firstLine || "Untitled", level: 2 };
     });
 
