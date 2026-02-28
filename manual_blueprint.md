@@ -149,7 +149,7 @@
 
 * **【接着阻害因子の完全除去による臨床的エビデンス】**
   * 当院では、う蝕処置、CAD/CAM冠、自費補綴物（ジルコニア、e.max、ゴールド）のセット、およびコア築造の際、接着強度の低下を防ぐために**「カタナクリーナー」による清掃を必須工程**としています。
-  * ![カタナクリーナー製品画像](/images/katana_cleaner_product_image_1772258291597.png)
+  * ![カタナクリーナー製品画像](/api/proxy-image?path=public/images/katana_cleaner_product_image_1772258291597.png)
 * **成分と物性**:
   * **MDP塩**: クラレ独自のリン酸エステル系モノマー。界面活性作用により、唾液、血液、仮着材の残留物などの接着阻害因子を強力に剥がし浮かせます。
   * **弱酸性（pH 4.5）**: 歯質（象牙質・エナメル質）を過度に脱灰せず、知覚過敏のリスクを抑えながら口腔内で安全に使用できます。
@@ -167,7 +167,7 @@
 
 * **【デジタル歯科学会・日本歯科CAD/CAM学会 推奨基準】**
   * 当院では、iTeroおよびKAGURA（神樂）を用いた高精度な光学印象を実施しています。
-  * ![KAGURA Smart](/images/kagura_ios_scanner_image_1772266971995.png)
+  * ![KAGURA Smart](/api/proxy-image?path=public/images/kagura_ios_scanner_image_1772266971995.png)
 * **主要機器の特性**:
   * **iTero Element 5D**: 矯正（インビザライン）および包括診療用。近赤外光（NIRI）によるう蝕検知機能を備え、タイムラプスによる経過観察が可能。
   * **KAGURA（神樂）**: 日本発の超軽量（138g）IOS。驚異的なスキャンスピードと、技工CAD（exocad）とのシームレスな連携が強み。
@@ -188,7 +188,7 @@
     3. **口腔内＆顔貌写真（標準8枚〜12枚法）**:
         * 基本5枚法（正面、左右側方、上下顎咬合面）。
         * 補助的に、**iPhoneの専用アプリ（Invisalign Practice App等）** を活用した動的なスマイル確認や遠隔モニタリング用撮影。
-        * ![iPhoneによる撮影イメージ](/images/dental_hygiene_instruction_illustration_1772205666042.png)
+        * ![iPhoneによる撮影イメージ](/api/proxy-image?path=public/images/dental_hygiene_instruction_illustration_1772205666042.png)
     4. **パノラマ・デンタルX線**: 全体像と個々の歯周組織状況の確認。
 * **インビザライン社の情報に基づく活用**:
   * **Virtual Care**: iPhoneアプリを通じて、自宅での装着状況をモニタリング。
