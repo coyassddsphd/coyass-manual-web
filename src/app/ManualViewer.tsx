@@ -480,9 +480,9 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="bg-white w-full max-w-2xl h-full max-h-[85vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-slate-200"
+                            className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border border-slate-200"
                         >
-                            {/* Header */}
+                            {/* Header: 固定 */}
                             <div className="p-8 bg-gradient-to-br from-blue-600 to-indigo-700 text-white shrink-0 relative">
                                 <h3 className="text-2xl font-black tracking-tight mb-1">Editor Intelligence</h3>
                                 <p className="text-blue-100 text-sm font-medium opacity-90">
@@ -492,6 +492,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                 </p>
                                 <button
                                     onClick={() => setSelectedSection(null)}
+                                    title="閉じる"
                                     className="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-full transition-colors"
                                     disabled={isLoading}
                                 >
@@ -499,21 +500,21 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                 </button>
                             </div>
 
-                            {/* Body (Scrollable) */}
-                            <div className="flex-1 overflow-y-auto p-8 space-y-8 min-h-0 custom-scrollbar">
+                            {/* Body: スクロールエリア（最大高を制限して確実な表示を保証） */}
+                            <div className="overflow-y-auto p-8 space-y-8 bg-white max-h-[60vh]">
                                 <div>
                                     <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Target Context</label>
-                                    <div className="bg-slate-50 p-5 rounded-2xl text-xs text-slate-500 italic border border-slate-100 max-h-24 overflow-y-auto leading-relaxed">
+                                    <div className="bg-slate-50 p-5 rounded-2xl text-xs text-slate-500 italic border border-slate-100 max-h-32 overflow-y-auto leading-relaxed shadow-inner">
                                         {selectedSection}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3" htmlFor="instructions">Change Instructions</label>
+                                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3" htmlFor="instructions-area">Change Instructions</label>
                                     <textarea
-                                        id="instructions"
+                                        id="instructions-area"
                                         autoFocus
-                                        className="w-full p-6 bg-white border-2 border-slate-100 rounded-2xl focus:outline-none focus:border-blue-600 transition-all resize-none text-slate-800 text-base leading-relaxed placeholder:text-slate-300 shadow-sm min-h-[120px]"
+                                        className="w-full p-6 bg-white border-2 border-slate-100 rounded-2xl focus:outline-none focus:border-blue-600 transition-all resize-none text-slate-800 text-base leading-relaxed placeholder:text-slate-300 shadow-sm min-h-[140px]"
                                         placeholder="例：写真の手順を箇条書きで追加して！"
                                         value={comment}
                                         onChange={(e) => setComment(e.target.value)}
@@ -526,8 +527,8 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                     <div
                                         onClick={() => !isLoading && fileInputRef.current?.click()}
                                         className={cn(
-                                            "relative border-2 border-dashed rounded-2xl p-6 transition-all cursor-pointer flex flex-col items-center justify-center gap-3",
-                                            attachedImage ? "border-blue-200 bg-blue-50/30" : "border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-white"
+                                            "relative border-2 border-dashed rounded-2xl p-8 transition-all cursor-pointer flex flex-col items-center justify-center gap-3",
+                                            attachedImage ? "border-blue-200 bg-blue-50/30" : "border-slate-200 hover:border-blue-400 bg-slate-50/10 hover:bg-slate-50"
                                         )}
                                     >
                                         <input
@@ -539,11 +540,11 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                         />
 
                                         {attachedImage ? (
-                                            <div className="relative w-full h-32 flex items-center justify-center bg-white rounded-xl border border-slate-100 overflow-hidden">
+                                            <div className="relative w-full h-32 flex items-center justify-center bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
                                                 {attachedImage.mimeType === 'application/pdf' ? (
                                                     <div className="flex flex-col items-center gap-2">
                                                         <div className="p-3 bg-red-50 rounded-xl"><AlertCircle className="w-8 h-8 text-red-500" /></div>
-                                                        <span className="text-[10px] font-bold text-slate-500">PDF書類が選択されました</span>
+                                                        <span className="text-[10px] font-bold text-slate-500 text-center px-4 truncate w-full">PDF書類が選択されました</span>
                                                     </div>
                                                 ) : (
                                                     <Image
@@ -555,7 +556,7 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                 )}
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setAttachedImage(null); }}
-                                                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-lg z-10"
+                                                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-lg z-10 hover:bg-red-600 transition-colors"
                                                 >
                                                     <X className="w-4 h-4" />
                                                 </button>
@@ -563,8 +564,8 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                         ) : (
                                             <>
                                                 <div className="flex gap-4">
-                                                    <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100"><Camera className="w-6 h-6 text-slate-400" /></div>
-                                                    <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100"><ImageIcon className="w-6 h-6 text-slate-400" /></div>
+                                                    <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100"><Camera className="w-6 h-6 text-slate-400" /></div>
+                                                    <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100"><ImageIcon className="w-6 h-6 text-slate-400" /></div>
                                                 </div>
                                                 <p className="text-xs font-bold text-slate-500">タップして写真撮影 or 書類(PDF)を選択</p>
                                             </>
@@ -577,17 +578,17 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         className={cn(
-                                            "p-5 rounded-2xl flex items-center gap-4 border",
+                                            "p-6 rounded-2xl flex items-center gap-4 border",
                                             message.includes("❌") ? "bg-red-50 border-red-100 text-red-700" : "bg-blue-50 border-blue-100 text-blue-800"
                                         )}
                                     >
-                                        {message.includes("❌") ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle2 className="w-5 h-5 flex-shrink-0 animate-bounce" />}
-                                        <span className="text-sm font-black italic">{message}</span>
+                                        {message.includes("❌") ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle2 className="w-5 h-5 flex-shrink-0 animate-bounce text-blue-500" />}
+                                        <span className="text-sm font-black">{message}</span>
                                     </motion.div>
                                 )}
                             </div>
 
-                            {/* Footer */}
+                            {/* Footer: 固定 */}
                             <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-4 shrink-0">
                                 <button
                                     onClick={() => setSelectedSection(null)}
