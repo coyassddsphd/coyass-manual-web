@@ -68,7 +68,7 @@ export async function POST(request: Request) {
             });
 
             if (uploadImageRes.ok) {
-                newImagePath = `/api/proxy-image?path=${imagePathInRepo}`;
+                newImagePath = `/api/proxy-image?url=${imagePathInRepo}`;
                 console.log(`Image uploaded and proxied: ${newImagePath}`);
             } else {
                 const errText = await uploadImageRes.text();
