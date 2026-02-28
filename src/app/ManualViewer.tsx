@@ -402,7 +402,13 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                         }
                                                     }
 
-                                                    const finalImgSrc = proxiedSrc ? `${proxiedSrc}${proxiedSrc.includes('?') ? '&' : '?'}v=${stableVersion}` : "";
+                                                    // 画像URLを固定するためのバージョン管理
+                                                    // (コンポーネント内で定義済みだが、不整合回避のため明確なパス解決を行う)
+                                                    let finalImgSrc = "";
+                                                    if (proxiedSrc) {
+                                                        const connector = proxiedSrc.includes('?') ? '&' : '?';
+                                                        finalImgSrc = `${proxiedSrc}${connector}v=${stableVersion}`;
+                                                    }
 
                                                     return (
                                                         <div className={`relative group/img-container my-10 ${isLogo ? 'max-w-[200px]' : 'w-full'}`}>
@@ -416,10 +422,23 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                                                                         onError={(e) => {
                                                                             // プロキシに失敗した場合の最後の手：直接パス（/images/...）を試みる
                                                                             const target = e.target as HTMLImageElement;
-                                                                            const directPath = srcUrl.startsWith('/') ? srcUrl : `/${srcUrl}`;
-                                                                            if (srcUrl && !target.src.endsWith(directPath)) {
-                                                                                console.warn("Proxy failed, falling back to direct URL:", directPath);
-                                                                                target.src = directPath;
+
+                                                                            // srcUrlから実際のパス部分を抽出 (/api/proxy-image?path=public/images/... -> /images/...)
+                                                                            let fallbackPath = "/images/unknown.png";
+                                                                            if (srcUrl.includes('path=')) {
+                                                                                const params = new URLSearchParams(srcUrl.split('?')[1]);
+                                                                                const rawPath = params.get('path') || "";
+                                                                                // public/Images/xxx -> /images/xxx
+                                                                                fallbackPath = '/' + rawPath.replace(/^(public\/|images\/|\/public\/|\/images\/|\/)/, 'images/');
+                                                                            } else if (srcUrl.startsWith('/')) {
+                                                                                fallbackPath = srcUrl;
+                                                                            } else {
+                                                                                fallbackPath = '/' + srcUrl;
+                                                                            }
+
+                                                                            if (target.src !== window.location.origin + fallbackPath) {
+                                                                                console.warn(`[Proxy Fallback] Redirecting from ${target.src} to ${fallbackPath}`);
+                                                                                target.src = fallbackPath;
                                                                             }
                                                                         }}
                                                                     />

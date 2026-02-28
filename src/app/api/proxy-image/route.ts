@@ -52,19 +52,30 @@ export async function GET(request: Request) {
             return new Response("Server configuration error: Missing GITHUB_TOKEN", { status: 500 });
         }
 
-        // パス候補の生成 (public/images/, images/, 直接)
-        const purePath = urlParam.replace(/^(public\/|images\/|\/public\/|\/images\/|\/)/, '');
-        const pathCandidates = [
-            `public/images/${purePath}`,
-            `images/${purePath}`,
-            purePath
-        ];
+        // パス候補の生成 (GitHubリポジトリ上の正確な位置を探索)
+        // 1. 指定されたパスそのもの
+        // 2. public/images/ を付与
+        // 3. images/ を付与
+        // 4. 重複を削った純粋なファイル名のみにして再構築
+
+        const rawPath = urlParam;
+        const fileName = urlParam.split('/').pop() || "";
+
+        const pathCandidates = Array.from(new Set([
+            rawPath, // そのまま
+            `public/images/${fileName}`,
+            `images/${fileName}`,
+            `public/images/${rawPath.replace(/^(public\/|images\/|\/)/g, '')}`,
+            rawPath.replace(/^\//, '')
+        ])).filter(p => p && p.length > 0);
+
+        console.log(`[Proxy] Start searching candidates for: ${urlParam}`);
 
         for (const imagePath of pathCandidates) {
-            console.log(`[Proxy] Attempting GitHub path: ${imagePath}`);
+            console.log(`[Proxy] Testing candidate: ${imagePath}`);
             const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`;
 
-            // 第1試行: JSON/Base64デコード方式 (実績があり最も安定)
+            // 第1試行: JSON/Base64デコード方式 (最も安定)
             try {
                 const jsonRes = await fetch(apiUrl, {
                     headers: {
@@ -76,9 +87,9 @@ export async function GET(request: Request) {
                 });
 
                 if (jsonRes.ok) {
-                    console.log(`[Proxy] Success (JSON/Base64): ${imagePath}`);
                     const data = await jsonRes.json();
                     if (data.content) {
+                        console.log(`[Proxy] SUCCESS! Found at: ${imagePath} (via JSON)`);
                         const buffer = Buffer.from(data.content, 'base64');
                         const ext = imagePath.split('.').pop()?.toLowerCase() || 'jpg';
                         const contentTypeMap: Record<string, string> = {
@@ -88,18 +99,20 @@ export async function GET(request: Request) {
                         return new Response(buffer, {
                             headers: {
                                 'Content-Type': contentTypeMap[ext] || 'image/jpeg',
-                                'Cache-Control': 'public, max-age=3600',
-                                'X-Proxy-Source': 'GitHub-API-Base64',
-                                'X-Resolved-Path': imagePath
+                                'Cache-Control': 'public, max-age=86400', // 24時間キャッシュ
+                                'X-Resolved-Path': imagePath,
+                                'X-Proxy-Method': 'JSON-Base64'
                             },
                         });
                     }
+                } else {
+                    console.log(`[Proxy] Candidate failed (JSON): ${imagePath} -> Status: ${jsonRes.status}`);
                 }
             } catch (e) {
-                console.warn(`[Proxy] JSON fetch exception for ${imagePath}:`, e);
+                console.error(`[Proxy] JSON Exception for ${imagePath}:`, e);
             }
 
-            // 第2試行: rawコンテンツ取得方式
+            // 第2試行: raw取得 (念のため)
             try {
                 const rawRes = await fetch(apiUrl, {
                     headers: {
@@ -111,7 +124,7 @@ export async function GET(request: Request) {
                 });
 
                 if (rawRes.ok) {
-                    console.log(`[Proxy] Success (+raw): ${imagePath}`);
+                    console.log(`[Proxy] SUCCESS! Found at: ${imagePath} (via Raw)`);
                     const buffer = await rawRes.arrayBuffer();
                     const ext = imagePath.split('.').pop()?.toLowerCase() || 'jpg';
                     const contentTypeMap: Record<string, string> = {
@@ -121,18 +134,26 @@ export async function GET(request: Request) {
                     return new Response(buffer, {
                         headers: {
                             'Content-Type': contentTypeMap[ext] || 'image/jpeg',
-                            'Cache-Control': 'public, max-age=3600',
-                            'X-Proxy-Source': 'GitHub-API-Raw',
-                            'X-Resolved-Path': imagePath
+                            'Cache-Control': 'public, max-age=86400',
+                            'X-Resolved-Path': imagePath,
+                            'X-Proxy-Method': 'Raw'
                         },
                     });
                 }
             } catch (e) {
-                console.warn(`[Proxy] Raw fetch exception for ${imagePath}:`, e);
+                console.error(`[Proxy] Raw Exception for ${imagePath}:`, e);
             }
         }
 
-        return new Response(`Image not found in any candidates for: ${urlParam}`, { status: 404 });
+        console.error(`[Proxy] ALL candidates failed for: ${urlParam}`);
+        return new Response(JSON.stringify({
+            error: "Image not found",
+            requested: urlParam,
+            tried: pathCandidates
+        }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+        });
 
     } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : "Unknown error";
