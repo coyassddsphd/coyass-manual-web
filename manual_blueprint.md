@@ -65,20 +65,22 @@
 * **【使用ボンディング材の特性と取り扱い（臨床データ）】**
   * 当院では、症例や治療部位、接着メカニズムに応じて以下のボンディング材を使い分けています。
   * **1. クラレ ユニバーサルボンドクイックER**: 短時間で強力な接着力を発揮するセルフエッチングボンド。操作時間を短縮し、効率的な接着処置を可能にします。
-      ![クラレ ユニバーサルボンドクイックER](/api/proxy-image?path=public/images/uploaded_1772267816746.jpeg)
+      ![クラレ ユニバーサルボンドクイックER](https://dental.kuraraynoritake.com/media/filer_public_thumbnails/filer_public/ea/fc/eafce7e8-2edc-4340-9854-32ae38d2a6a6/universal_bond_quick_er_main.jpg__440x440_q85_subsampling-2.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
   * **2. GC ビューティボンド**: ワンステップ・セルフエッチング。操作簡便で、知覚過敏リスクを低減します。
+      ![GC ビューティボンド](https://www.gcdental.co.jp/sys/img/products/1255/main.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
   * **3. Shofu ビューティボンド エクストリーム**: 3ステップボンディングに匹敵する高い接着力と耐久性を持ち、様々な窩洞形態に対応可能です。
       ![Shofu ビューティボンド エクストリーム](https://www.shofu.co.jp/wp/wp-content/uploads/2020/09/BeautiBondXtreme_main.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
   * **4. デンツプライシロナ プライム&ボンドユニバーサル**: 万能型の接着システム。金属・セラミック・ジルコニアなど多様な材料に対応し、優れた接着性を実現します。
-      ![デンツプライシロナ プライム&ボンドユニバーサル](https://www.dentsplysirona.com/content/dam/dentsplysirona/de/products/restorative/Prime_Bond_Universal/Dentsply-Sirona-Prime-Bond-Universal-Product-Image.jpg)
+      ![デンツプライシロナ プライム&ボンドユニバーサル](https://www.dentsplysirona.com/static-resources/images/products/restorative/PrimeAndBondUniversalBottle-DentsplySirona.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
   * **5. 3M スコッチボンド ユニバーサルプラス**: 高い信頼性と象牙質接着性を兼ね備え、優れた封鎖性を提供します。
+      ![3M スコッチボンド ユニバーサルプラス](https://multimedia.3m.com/mws/media/1885994P/scotchbond-universal-plus-vial-li.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
   * **6. クラレ ボンドマーライトレス**: デュアルキュア型の接着システム。光が届きにくい深部窩洞やコア築造、間接修復物の接着に最適です。
-      ![クラレ ボンドマーライトレス](https://dental.kuraraynoritake.com/media/filer_public_thumbnails/filer_public/72/72/72727289-5f21-482a-a92c-6dd42169994c/bondmer_lightless_main.jpg__440x440_q85_subsampling-2.jpg)
+      ![クラレ ボンドマーライトレス](https://www.tokuyama-dental.co.jp/product/bondmerlightless/img/main_img.jpg)
       *(画像は製品パッケージの外観を示します。表示されない場合は製品名で検索し、ご確認ください。)*
 
 #### 2.3 インレー（詰め物）
@@ -149,7 +151,7 @@
 
 * **【接着阻害因子の完全除去による臨床的エビデンス】**
   * 当院では、う蝕処置、CAD/CAM冠、自費補綴物（ジルコニア、e.max、ゴールド）のセット、およびコア築造の際、接着強度の低下を防ぐために**「カタナクリーナー」による清掃を必須工程**としています。
-  * ![カタナクリーナー製品画像](/api/proxy-image?path=public/images/katana_cleaner_product_image_1772258291597.png)
+  * ![カタナクリーナー製品画像](https://kuraraynoritake.jp/katana-cleaner/img/product_img.png)
 * **成分と物性**:
   * **MDP塩**: クラレ独自のリン酸エステル系モノマー。界面活性作用により、唾液、血液、仮着材の残留物などの接着阻害因子を強力に剥がし浮かせます。
   * **弱酸性（pH 4.5）**: 歯質（象牙質・エナメル質）を過度に脱灰せず、知覚過敏のリスクを抑えながら口腔内で安全に使用できます。
