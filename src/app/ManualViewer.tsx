@@ -18,6 +18,7 @@ import {
     Loader2,
     LayoutPanelTop,
     BookOpen,
+    History,
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -282,6 +283,9 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
 
                     <nav className="space-y-1 flex-1">
                         <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">CHAPTERS</p>
+
+                        {/* 検索リンクはヘッダーへ移動したため、サイドバーからは削除または控えめに配置 */}
+
                         {navigationItems.map((item, idx) => (
                             <button
                                 key={idx}
@@ -322,9 +326,18 @@ export default function ManualViewer({ initialMarkdown }: ManualViewerProps) {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6 }}
                         >
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold mb-4">
-                                <CheckCircle2 className="w-3 h-3" />
-                                最終更新: {isMounted ? new Date().toLocaleDateString('ja-JP') : "読み込み中..."}
+                            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-6">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    最終更新: {isMounted ? new Date().toLocaleDateString('ja-JP') : "読み込み中..."}
+                                </div>
+                                <a
+                                    href="/search"
+                                    className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-sm font-black shadow-xl shadow-blue-200 hover:scale-105 transition-all ring-4 ring-white"
+                                >
+                                    <History className="w-4 h-4" />
+                                    患者カルテ・AIメンタル検索
+                                </a>
                             </div>
                             <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-4 leading-tight">
                                 スタッフマニュアル <span className="text-blue-600">v2.0</span>
