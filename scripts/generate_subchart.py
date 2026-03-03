@@ -109,50 +109,65 @@ def run_main():
         with open(appointments_json_path, "r", encoding="utf-8") as f:
             appointments = json.load(f)
 
-    # マッチングした患者のIDを特定（文字起こし内に名前が含まれているか）
-    patient_id = "unknown"
-    patient_name = "不明"
+    # --- 改善されたマルチマッチングロジック ---
+    matched_patients = []
     if appointments:
         for appt in appointments:
             name = appt.get("name", "")
-            # 名前（苗字またはフルネーム）が文字起こしに含まれているかチェック
-            if name and (name in transcript_content or name.replace(" ", "") in transcript_content):
-                patient_id = appt.get("chart_number") or appt.get("id", "unknown")
-                patient_name = name
-                break
+            chart_no = appt.get("chart_number") or appt.get("id", "unknown")
+            treatment = appt.get("treatment", "")
+            
+            # 手動の例外ルール (本山 -> 奥山)
+            is_match = False
+            if name == "奥山 沙織" and ("本山" in transcript_content or "奥山" in transcript_content):
+                is_match = True
+            elif name and (name in transcript_content or name.replace(" ", "") in transcript_content or name.split(" ")[0] in transcript_content):
+                is_match = True
+            
+            if is_match:
+                matched_patients.append({
+                    "id": chart_no,
+                    "name": name,
+                    "treatment": treatment
+                })
+
+    if not matched_patients:
+        matched_patients.append({"id": "unknown", "name": "不明", "treatment": ""})
 
     # 今日の日付を取得
     today_str = datetime.now().strftime("%Y%m%d")
     
-    print(f"--- Generating Sub-Chart for {patient_name} (ID: {patient_id}) ---")
-    subchart_result = generate_subchart(transcript_content, appointments)
-    print("Sub-Chart Received.")
-    
-    print("--- Evaluating Staff ---")
-    evaluation_result = evaluate_staff(transcript_content)
-    print("Evaluation Received.")
-    
-    # ファイルに保存 (日付_患者番号.md)
-    filename = f"{today_str}_{patient_id}.md"
-    output_path = os.path.join("data/subcharts", filename)
-    
-    # 評価結果も保存
-    eval_filename = f"{today_str}_{patient_id}_eval.md"
-    eval_path = os.path.join("data/subcharts", eval_filename)
-    
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(subchart_result)
-    print(f"Sub-chart saved to {output_path}")
-
-    with open(eval_path, "w", encoding="utf-8") as f:
-        f.write(evaluation_result)
-    print(f"Evaluation saved to {eval_path}")
+    for patient in matched_patients:
+        p_id = patient["id"]
+        p_name = patient["name"]
+        
+        print(f"--- Generating Sub-Chart for {p_name} (ID: {p_id}) ---")
+        # 予約票の情報をAIに渡すことで精度を向上
+        subchart_result = generate_subchart(transcript_content, [patient])
+        
+        print(f"--- Evaluating Staff for {p_name} ---")
+        evaluation_result = evaluate_staff(transcript_content)
+        
+        # ファイルに保存 (日付_患者番号.md)
+        filename = f"{today_str}_{p_id}.md"
+        output_path = os.path.join("data/subcharts", filename)
+        
+        eval_filename = f"{today_str}_{p_id}_eval.md"
+        eval_path = os.path.join("data/subcharts", eval_filename)
+        
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(subchart_result)
+        
+        with open(eval_path, "w", encoding="utf-8") as f:
+            f.write(evaluation_result)
+            
+        print(f"Saved: {filename} and {eval_filename}")
 
     # 最新版として last_generated.md にも保存
     with open("data/subcharts/last_generated.md", "w", encoding="utf-8") as f:
-        f.write("# Sub-Chart\n\n" + subchart_result + "\n\n---\n\n# Staff Evaluation\n\n" + evaluation_result)
+        f.write(f"# Latest Sync Status\n\nMatched {len(matched_patients)} patients.")
 
 if __name__ == "__main__":
     if not API_KEY:

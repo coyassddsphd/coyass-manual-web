@@ -1,0 +1,9 @@
+# Sub-Chart
+
+Error generating subchart: Timeout of 600.0s exceeded, last exception: 503 DNS resolution failed for generativelanguage.googleapis.com:443: C-ares status is not ARES_SUCCESS qtype=A name=generativelanguage.googleapis.com is_balancer=0: Could not contact DNS servers
+
+---
+
+# Staff Evaluation
+
+Error generating evaluation: Timeout of 600.0s exceeded, last exception: 503 DNS resolution failed for generativelanguage.googleapis.com:443: C-ares status is not ARES_SUCCESS qtype=A name=generativelanguage.googleapis.com is_balancer=0: Could not contact DNS servers
