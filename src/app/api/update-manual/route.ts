@@ -27,14 +27,15 @@ export async function POST(request: Request) {
         }
 
         // --- GitHubからの原本取得 ---
-        const githubToken = process.env.GITHUB_TOKEN;
-        const repoOwner = "coyassddsphd";
-        const repoName = "coyass-manual-web";
+        const githubToken = process.env.GITHUB_TOKEN || process.env.NEXT_PUBLIC_GITHUB_TOKEN;
+        const repoFullName = process.env.NEXT_PUBLIC_GITHUB_REPO || "coyassddsphd/coyass-manual-web";
+        const [repoOwner, repoName] = repoFullName.split("/");
         const filePathInRepo = "manual_blueprint.md";
 
         if (!githubToken) {
+            console.error("GITHUB_TOKEN is missing in environment variables.");
             return NextResponse.json(
-                { error: "GITHUB_TOKENが見つかりません。" },
+                { error: "GitHub連携のためのトークン(GITHUB_TOKEN)が設定されていません。" },
                 { status: 500 }
             );
         }
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
             const uploadImageRes = await fetch(imageApiUrl, {
                 method: "PUT",
                 headers: {
-                    "Authorization": `token ${githubToken}`, // tokenに統一
+                    "Authorization": `Bearer ${githubToken}`,
                     "Accept": "application/vnd.github.v3+json",
                     "Content-Type": "application/json",
                     "User-Agent": "Coyass-Manual-App"

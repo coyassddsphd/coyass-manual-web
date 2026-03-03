@@ -1,0 +1,38 @@
+name: Cloud Data Sync (Docoapo & Plaud)
+
+on:
+  schedule:
+    - cron: '0 * * * *' # 毎時 0分に実行
+  workflow_dispatch: # 手動実行用
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          pip install google-generativeai requests playwright
+          playwright install chromium
+          
+      - name: Run Pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # DocoapoとPlaudのデータを取得して紐付けるスクリプトを実行
+          python3 scripts/run_pipeline.py
+          
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/subcharts/*.md data/docoapo/*.json
+          git commit -m "Auto-sync: Patient data and subcharts [skip ci]" || echo "No changes to commit"
+          git push
