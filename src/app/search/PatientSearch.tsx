@@ -10,6 +10,8 @@ interface SearchResult {
     date: string;
     content: string;
     filename: string;
+    alert?: string; // 予約不整合アラート
+    memo?: string;  // 電話の一言メモ
 }
 
 const PatientSearch = () => {
@@ -138,6 +140,21 @@ const PatientSearch = () => {
 
                                     <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
                                         <div className="p-8 md:p-10 prose prose-slate prose-blue max-w-none prose-headings:font-black prose-p:text-slate-700 prose-p:font-medium prose-li:font-semibold">
+                                            {record.alert && (
+                                                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6 rounded-r-xl">
+                                                    <div className="flex items-center gap-2 text-amber-800 font-bold mb-1">
+                                                        <AlertCircle className="w-4 h-4" />
+                                                        予約不整合アラート
+                                                    </div>
+                                                    <p className="text-amber-700 text-sm m-0">{record.alert}</p>
+                                                </div>
+                                            )}
+                                            {record.memo && (
+                                                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-xl">
+                                                    <div className="text-blue-800 font-bold text-sm mb-1 italic">電話一言メモ</div>
+                                                    <p className="text-blue-700 text-sm m-0">{record.memo}</p>
+                                                </div>
+                                            )}
                                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                                 {record.content}
                                             </ReactMarkdown>

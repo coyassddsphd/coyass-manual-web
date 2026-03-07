@@ -43,11 +43,25 @@ export async function GET(request: NextRequest) {
     const results = matches.map(file => {
       const filePath = path.join(dataDir, file);
       const content = fs.readFileSync(filePath, 'utf-8');
-      const dateStr = file.split('_')[0];
+      const baseName = file.replace('.md', '');
+      const dateStr = baseName.split('_')[0];
+
+      // 関連するアラートやメモがあれば読み込む
+      let alertContent = '';
+      let memoContent = '';
+
+      const alertPath = path.join(dataDir, `${baseName}_alert.md`);
+      if (fs.existsSync(alertPath)) alertContent = fs.readFileSync(alertPath, 'utf-8');
+
+      const memoPath = path.join(dataDir, `${baseName}_memo.md`);
+      if (fs.existsSync(memoPath)) memoContent = fs.readFileSync(memoPath, 'utf-8');
+
       return {
         date: dateStr,
         content: content,
-        filename: file
+        filename: file,
+        alert: alertContent,
+        memo: memoContent
       };
     }).sort((a, b) => b.date.localeCompare(a.date));
 

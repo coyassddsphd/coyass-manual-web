@@ -1,0 +1,54 @@
+{
+    "materials": [
+        {
+            "name": "カタナクリーナー",
+            "usage": "補綴物の清掃・処理"
+        },
+        {
+            "name": "ユニバーサルボンド",
+            "usage": "接着"
+        },
+        {
+            "name": "パナビアV5",
+            "usage": "合着"
+        },
+        {
+            "name": "iTero",
+            "usage": "口腔内スキャナー"
+        },
+        {
+            "name": "ジルコニア",
+            "usage": "補綴材料"
+        },
+        {
+            "name": "オクルーザルベニア",
+            "usage": "咬合面のみの薄い修復物"
+        }
+    ],
+    "terms": [
+        {
+            "abbreviation": "Prep",
+            "meaning": "支台歯形成"
+        },
+        {
+            "abbreviation": "Imp",
+            "meaning": "印象採得"
+        },
+        {
+            "abbreviation": "CR",
+            "meaning": "コンポジットレジン修復"
+        },
+        {
+            "abbreviation": "PD",
+            "meaning": "歯周ポケット深さ"
+        },
+        {
+            "abbreviation": "BOP",
+            "meaning": "プローブ時の出血"
+        },
+        {
+            "abbreviation": "PCR",
+            "meaning": "プラーク・コントロール・レコード"
+        }
+    ]
+}
