@@ -23,6 +23,7 @@ jobs:
           
       - name: Run Pipeline
         env:
+          PYTHONPATH: .
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TOBILA_URL: ${{ secrets.TOBILA_URL }}
