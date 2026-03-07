@@ -1,7 +1,11 @@
 import subprocess
 import os
+import sys
 import json
 import asyncio
+
+# Ensure the parent directory is in sys.path so 'scripts.xyz' can be imported
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 async def run_step_async(name, coro):
     print(f"--- [Step] {name} ---")
