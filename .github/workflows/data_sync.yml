@@ -2,8 +2,8 @@ name: Cloud Data Sync (Docoapo & Plaud)
 
 on:
   schedule:
-    - cron: '0 * * * *' # 毎時 0分に実行
-  workflow_dispatch: # 手動実行用
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
